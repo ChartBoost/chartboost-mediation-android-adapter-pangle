@@ -30,16 +30,28 @@ class PangleAdapter : PartnerAdapter {
          */
         private const val HELIUM_MEDIATION = "Helium"
 
+        /**
+         * CCPA enum class when setting CCPA privacy values to Pangle.
+         * Pangle uses [Int] for their CCPA privacy data values.
+         */
         private enum class CCPAValues(val value: Int) {
             USER_HAS_GRANTED(0),
             USER_HAS_NOT_GRANTED(1)
         }
 
+        /**
+         * COPPA enum class when setting COPPA privacy values to Pangle.
+         * Pangle uses [Int] for their COPPA privacy data values.
+         */
         private enum class COPPAValues(val value: Int) {
             ADULT(0),
             CHILD(1)
         }
 
+        /**
+         * GDPR enum class when setting GDPR privacy values to Pangle.
+         * Pangle uses [Int] for their GDPR privacy data values.
+         */
         private enum class GDPRValues(val value: Int) {
             USER_CONSENT_UNKNOWN(-1),
             USER_CONSENT_GRANTED(0),
@@ -50,6 +62,11 @@ class PangleAdapter : PartnerAdapter {
          * Indicate whether GDPR currently applies to the user.
          */
         private var isGdpr: Boolean? = null
+
+        /**
+         * Private data class to determine a Pangle banner size as they take in a Float.
+         */
+        private data class BannerSize(val widthDP: Float, val heightDP: Float)
     }
 
     /**
@@ -125,6 +142,12 @@ class PangleAdapter : PartnerAdapter {
         }
     }
 
+    /**
+     * Build the necessery configurations that the Pangle SDK requires on [setUp].
+     *
+     * @param appId an application ID that will be set in the configuration.
+     * @return a [TTAdConfig] object with the necessary configurations.
+     */
     private fun buildConfig(appId: String): TTAdConfig {
         return TTAdConfig.Builder()
             .appId(appId)
@@ -134,8 +157,10 @@ class PangleAdapter : PartnerAdapter {
     }
 
     /**
+     * Save the current GDPR applicability state for later use.
      *
-     *
+     * @param context The current [Context].
+     * @param gdprApplies True if GDPR applies, false otherwise.
      */
     override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
         isGdpr = gdprApplies
@@ -144,6 +169,7 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Notify Pangle of user GDPR consent.
      *
+     * @param context The current [Context].
      * @param gdprConsentStatus The user's current GDPR consent status.
      */
     override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
@@ -159,6 +185,8 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Notify Pangle of the CCPA compliance.
      *
+     * @param context The current [Context].
+     * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
      * @param privacyString The CCPA privacy String.
      */
     override fun setCcpaConsent(
@@ -176,6 +204,9 @@ class PangleAdapter : PartnerAdapter {
 
     /**
      * Notify Pangle of the COPPA subjectivity.
+     *
+     * @param context The current [Context].
+     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
      */
     override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
         TTAdSdk.setCoppa(
@@ -644,6 +675,4 @@ class PangleAdapter : PartnerAdapter {
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
-
-    private data class BannerSize(val widthDP: Float, val heightDP: Float)
 }
