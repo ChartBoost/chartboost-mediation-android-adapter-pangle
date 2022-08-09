@@ -24,50 +24,12 @@ class PangleAdapter : PartnerAdapter {
          * Key for parsing the Pangle SDK application ID.
          */
         private const val APPLICATION_ID_KEY = "application_id"
-
-        /**
-         * Helium name that is passed down to Pangle data on [buildConfig].
-         */
-        private const val HELIUM_MEDIATION = "Helium"
-
-        /**
-         * CCPA enum class when setting CCPA privacy values to Pangle.
-         * Pangle uses [Int] for their CCPA privacy data values.
-         */
-        private enum class CCPAValues(val value: Int) {
-            USER_HAS_GRANTED(0),
-            USER_HAS_NOT_GRANTED(1)
-        }
-
-        /**
-         * COPPA enum class when setting COPPA privacy values to Pangle.
-         * Pangle uses [Int] for their COPPA privacy data values.
-         */
-        private enum class COPPAValues(val value: Int) {
-            ADULT(0),
-            CHILD(1)
-        }
-
-        /**
-         * GDPR enum class when setting GDPR privacy values to Pangle.
-         * Pangle uses [Int] for their GDPR privacy data values.
-         */
-        private enum class GDPRValues(val value: Int) {
-            USER_CONSENT_UNKNOWN(-1),
-            USER_CONSENT_GRANTED(0),
-            USER_CONSENT_NOT_GRANTED(1)
-        }
-
-        /**
-         * Indicate whether GDPR currently applies to the user.
-         */
-        private var isGdpr: Boolean? = null
-
-        /**
-         * Private data class to determine a Pangle banner size as they take in a Float.
-         */
-        private data class BannerSize(val widthDP: Float, val heightDP: Float)
     }
+
+    /**
+     * Indicate whether GDPR currently applies to the user.
+     */
+    private var isGdpr: Boolean? = null
 
     /**
      * Get the Pangle SDK version.
@@ -152,7 +114,7 @@ class PangleAdapter : PartnerAdapter {
         return TTAdConfig.Builder()
             .appId(appId)
             .supportMultiProcess(false)
-            .data("[{\"name\":\"mediation\",\"value\":\"$HELIUM_MEDIATION\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
+            .data("[{\"name\":\"mediation\",\"value\":\"Helium\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
             .build()
     }
 
@@ -175,9 +137,9 @@ class PangleAdapter : PartnerAdapter {
     override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         TTAdSdk.setGdpr(
             when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> GDPRValues.USER_CONSENT_GRANTED.value
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> GDPRValues.USER_CONSENT_NOT_GRANTED.value
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPRValues.USER_CONSENT_UNKNOWN.value
+                GdprConsentStatus.GDPR_CONSENT_GRANTED -> 0
+                GdprConsentStatus.GDPR_CONSENT_DENIED -> 1
+                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> -1
             }
         )
     }
@@ -196,8 +158,8 @@ class PangleAdapter : PartnerAdapter {
     ) {
         TTAdSdk.setCCPA(
             when (hasGivenCcpaConsent) {
-                true -> CCPAValues.USER_HAS_GRANTED.value
-                false -> CCPAValues.USER_HAS_NOT_GRANTED.value
+                true -> 0
+                false -> 1
             }
         )
     }
@@ -211,8 +173,8 @@ class PangleAdapter : PartnerAdapter {
     override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
         TTAdSdk.setCoppa(
             when (isSubjectToCoppa) {
-                true -> COPPAValues.CHILD.value
-                false -> COPPAValues.ADULT.value
+                true -> 1
+                false -> 0
             }
         )
     }
@@ -244,7 +206,6 @@ class PangleAdapter : PartnerAdapter {
         request: AdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-
         return when (request.format) {
             AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
             AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
@@ -311,13 +272,19 @@ class PangleAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val bannerAd = TTAdSdk.getAdManager().createAdNative(context)
-            val adSlot = AdSlot.Builder()
+
+            val adSlot = request.size?.let {
+                val widthDP = it.width.toFloat()
+                val heightDP = it.height.toFloat()
+                LogController.d("$TAG Pangle setting banner with size (w: $widthDP, h: $heightDP)")
+
+                AdSlot.Builder()
                 .setCodeId(request.partnerPlacement)
                 .setExpressViewAcceptedSize(
-                    getPangleAdSize(request.size).widthDP,
-                    getPangleAdSize(request.size).widthDP
-                )
-                .build()
+                    widthDP,
+                    heightDP
+                ).build()
+            }
 
             bannerAd.loadBannerExpressAd(adSlot, object : TTAdNative.NativeExpressAdListener {
                 override fun onError(code: Int, message: String?) {
@@ -328,8 +295,7 @@ class PangleAdapter : PartnerAdapter {
                 }
 
                 override fun onNativeExpressAdLoad(bannerAds: MutableList<TTNativeExpressAd>?) {
-                    bannerAds?.let {
-                        val banner = it[0]
+                    bannerAds?.firstOrNull()?.let { banner ->
                         banner.setExpressInteractionListener(object :
                             TTNativeExpressAd.ExpressAdInteractionListener {
                             override fun onAdClicked(bannerView: View?, type: Int) {
@@ -352,6 +318,10 @@ class PangleAdapter : PartnerAdapter {
                                 code: Int
                             ) {
                                 banner.destroy()
+                                LogController.e("$TAG Failed to render Pangle banner ad.")
+                                continuation.resumeWith(
+                                    Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
+                                )
                             }
 
                             override fun onRenderSuccess(
@@ -382,19 +352,6 @@ class PangleAdapter : PartnerAdapter {
                 }
             })
         }
-    }
-
-    /**
-     * Find the most appropriate Pangle ad size for the given screen area based on height.
-     *
-     * @param size The [Size] to parse for conversion.
-     *
-     * @return The Pangle ad size that best matches the given [Size].
-     */
-    private fun getPangleAdSize(size: Size?) = when (size?.height) {
-        in 50 until 90 -> BannerSize(320f, 50f)
-        in 90 until 250 -> BannerSize(300f, 250f)
-        else -> BannerSize(320f, 50f)
     }
 
     /**
@@ -520,49 +477,44 @@ class PangleAdapter : PartnerAdapter {
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
-        return partnerAd.ad?.let { ad ->
-            (ad as? TTFullScreenVideoAd)?.let {
-                val pangleVideoListener =
-                    object : TTFullScreenVideoAd.FullScreenVideoAdInteractionListener {
-                        override fun onAdShow() {
-                            Result.success(partnerAd)
-                        }
+        return (partnerAd.ad as? TTFullScreenVideoAd)?.let { ad ->
+            val pangleVideoListener =
+                object : TTFullScreenVideoAd.FullScreenVideoAdInteractionListener {
+                    override fun onAdShow() {
+                        Result.success(partnerAd)
+                    }
 
-                        override fun onAdVideoBarClick() {
-                            listener?.onPartnerAdClicked(partnerAd) ?: run {
-                                LogController.e(
-                                    "$TAG Unable to fire onPartnerAdClicked for Pangle adapter. " +
-                                            "Listener is null."
-                                )
-                            }
-                        }
-
-                        override fun onAdClose() {
-                            listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                                LogController.e(
-                                    "$TAG Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                            "Listener is null."
-                                )
-                            }
-                        }
-
-                        override fun onVideoComplete() {
-                            // NO-OP
-                        }
-
-                        override fun onSkippedVideo() {
-                            // NO-OP
+                    override fun onAdVideoBarClick() {
+                        listener?.onPartnerAdClicked(partnerAd) ?: run {
+                            LogController.e(
+                                "$TAG Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                                        "Listener is null."
+                            )
                         }
                     }
-                it.apply {
-                    setFullScreenVideoAdInteractionListener(pangleVideoListener)
-                    showFullScreenVideoAd(activity)
+
+                    override fun onAdClose() {
+                        listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                            LogController.e(
+                                "$TAG Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                                        "Listener is null."
+                            )
+                        }
+                    }
+
+                    override fun onVideoComplete() {
+                        // NO-OP
+                    }
+
+                    override fun onSkippedVideo() {
+                        // NO-OP
+                    }
                 }
-                Result.success(partnerAd)
-            } ?: run {
-                LogController.e("$TAG Failed to show Pangle interstitial ad. Ad is not TTFullScreenVideoAd.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            ad.apply {
+                setFullScreenVideoAdInteractionListener(pangleVideoListener)
+                showFullScreenVideoAd(activity)
             }
+            Result.success(partnerAd)
         } ?: run {
             LogController.e("$TAG Failed to show Pangle interstitial ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
@@ -583,71 +535,66 @@ class PangleAdapter : PartnerAdapter {
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
-        return partnerAd.ad?.let { ad ->
-            (ad as? TTRewardVideoAd)?.let {
-                val pangleVideoListener =
-                    object : TTRewardVideoAd.RewardAdInteractionListener {
-                        override fun onAdShow() {
-                            Result.success(partnerAd)
-                        }
+        return (partnerAd.ad as? TTRewardVideoAd)?.let { ad ->
+            val pangleVideoListener =
+                object : TTRewardVideoAd.RewardAdInteractionListener {
+                    override fun onAdShow() {
+                        Result.success(partnerAd)
+                    }
 
-                        override fun onAdVideoBarClick() {
-                            listener?.onPartnerAdClicked(partnerAd) ?: run {
-                                LogController.e(
-                                    "$TAG Unable to fire onPartnerAdClicked for Pangle adapter. " +
-                                            "Listener is null."
-                                )
-                            }
-                        }
-
-                        override fun onAdClose() {
-                            listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                                LogController.e(
-                                    "$TAG Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                            "Listener is null."
-                                )
-                            }
-                        }
-
-                        override fun onVideoComplete() {
-                            // NO-OP
-                        }
-
-                        override fun onVideoError() {
-                            // NO-OP
-                        }
-
-                        override fun onRewardVerify(
-                            rewardVerify: Boolean,
-                            rewardAmount: Int,
-                            rewardName: String?,
-                            errorCode: Int,
-                            errorMessage: String?
-                        ) {
-                            listener?.onPartnerAdRewarded(
-                                partnerAd,
-                                Reward(rewardAmount, rewardName ?: "")
-                            ) ?: run {
-                                LogController.e(
-                                    "$TAG Unable to fire onPartnerAdRewarded for Pangle adapter. " +
-                                            "Listener is null."
-                                )
-                            }
-                        }
-
-                        override fun onSkippedVideo() {
-                            // NO-OP
+                    override fun onAdVideoBarClick() {
+                        listener?.onPartnerAdClicked(partnerAd) ?: run {
+                            LogController.e(
+                                "$TAG Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                                        "Listener is null."
+                            )
                         }
                     }
-                it.apply {
-                    setRewardAdInteractionListener(pangleVideoListener)
-                    showRewardVideoAd(activity)
+
+                    override fun onAdClose() {
+                        listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                            LogController.e(
+                                "$TAG Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                                        "Listener is null."
+                            )
+                        }
+                    }
+
+                    override fun onVideoComplete() {
+                        // NO-OP
+                    }
+
+                    override fun onVideoError() {
+                        // NO-OP
+                    }
+
+                    override fun onRewardVerify(
+                        rewardVerify: Boolean,
+                        rewardAmount: Int,
+                        rewardName: String?,
+                        errorCode: Int,
+                        errorMessage: String?
+                    ) {
+                        listener?.onPartnerAdRewarded(
+                            partnerAd,
+                            Reward(rewardAmount, rewardName ?: "")
+                        ) ?: run {
+                            LogController.e(
+                                "$TAG Unable to fire onPartnerAdRewarded for Pangle adapter. " +
+                                        "Listener is null."
+                            )
+                        }
+                    }
+
+                    override fun onSkippedVideo() {
+                        // NO-OP
+                    }
                 }
-                Result.success(partnerAd)
-            } ?: run {
-                LogController.e("$TAG Failed to show Pangle rewarded ad. Ad is not TTRewardVideoAd.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            ad.apply {
+                setRewardAdInteractionListener(pangleVideoListener)
+                showRewardVideoAd(activity)
             }
+            Result.success(partnerAd)
         } ?: run {
             LogController.e("$TAG Failed to show Pangle rewarded ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
@@ -662,14 +609,9 @@ class PangleAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully destroyed, Result.failure(Exception) otherwise.
      */
     private fun destroyBannerAd(partnerAd: PartnerAd): Result<PartnerAd> {
-        return partnerAd.ad?.let {
-            if (it is TTNativeExpressAd) {
-                it.destroy()
-                Result.success(partnerAd)
-            } else {
-                LogController.w("$TAG Failed to destroy Pangle banner ad. Ad is not a Pangle Banner.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
-            }
+        return (partnerAd.ad as? TTNativeExpressAd)?.let { bannerAd ->
+            bannerAd.destroy()
+            Result.success(partnerAd)
         } ?: run {
             LogController.w("$TAG Failed to destroy Pangle banner ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
