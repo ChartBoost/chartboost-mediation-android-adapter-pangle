@@ -29,7 +29,7 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Indicate whether GDPR currently applies to the user.
      */
-    private var isGdpr: Boolean? = null
+    private var gdprApplies: Boolean? = null
 
     /**
      * Get the Pangle SDK version.
@@ -125,7 +125,7 @@ class PangleAdapter : PartnerAdapter {
      * @param gdprApplies True if GDPR applies, false otherwise.
      */
     override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
-        isGdpr = gdprApplies
+        this.gdprApplies = gdprApplies
     }
 
     /**
@@ -223,19 +223,27 @@ class PangleAdapter : PartnerAdapter {
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         val listener = listeners.remove(partnerAd.request.heliumPlacement)
-
-        return (context as? Activity)?.let { activity ->
-            when (partnerAd.request.format) {
-                AdFormat.BANNER -> {
-                    // Banner ads do not have a separate "show" mechanism.
-                    Result.success(partnerAd)
-                }
-                AdFormat.INTERSTITIAL -> showInterstitialAd(activity, partnerAd, listener)
-                AdFormat.REWARDED -> showRewardedAd(activity, partnerAd, listener)
+        return when (partnerAd.request.format) {
+            AdFormat.BANNER -> {
+                // Banner ads do not have a separate "show" mechanism.
+                Result.success(partnerAd)
             }
-        } ?: run {
-            LogController.e("$TAG Pangle failed to load an ad. Activity context is required.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            AdFormat.INTERSTITIAL -> {
+                (context as? Activity)?.let { activity ->
+                    showInterstitialAd(activity, partnerAd, listener)
+                } ?: run {
+                    LogController.e("$TAG Pangle failed to show interstitial ad. Activity context is required.")
+                    Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                }
+            }
+            AdFormat.REWARDED -> {
+                (context as? Activity)?.let { activity ->
+                    showRewardedAd(activity, partnerAd, listener)
+                } ?: run {
+                    LogController.e("$TAG Pangle failed to show rewarded ad. Activity context is required.")
+                    Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                }
+            }
         }
     }
 
@@ -274,15 +282,15 @@ class PangleAdapter : PartnerAdapter {
             val bannerAd = TTAdSdk.getAdManager().createAdNative(context)
 
             val adSlot = request.size?.let {
-                val widthDP = it.width.toFloat()
-                val heightDP = it.height.toFloat()
-                LogController.d("$TAG Pangle setting banner with size (w: $widthDP, h: $heightDP)")
+                val widthDp = it.width.toFloat()
+                val heightDp = it.height.toFloat()
+                LogController.d("$TAG Pangle setting banner with size (w: $widthDp, h: $heightDp)")
 
                 AdSlot.Builder()
                 .setCodeId(request.partnerPlacement)
                 .setExpressViewAcceptedSize(
-                    widthDP,
-                    heightDP
+                    widthDp,
+                    heightDp
                 ).build()
             }
 
