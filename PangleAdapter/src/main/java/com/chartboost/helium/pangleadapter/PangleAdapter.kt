@@ -16,6 +16,16 @@ import kotlin.coroutines.suspendCoroutine
 class PangleAdapter : PartnerAdapter {
     companion object {
         /**
+         * Flag that can optionally be set to enable Pangle's multi-process support. It must be set
+         * prior to initializing the Pangle SDK for it to take effect.
+         */
+        public var multiProcessSupport = false
+            set(value) {
+                field = value
+                LogController.d("$TAG Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.")
+            }
+
+        /**
          * The tag used for logging messages.
          */
         private val TAG = "[${this::class.java.simpleName}]"
@@ -113,7 +123,7 @@ class PangleAdapter : PartnerAdapter {
     private fun buildConfig(appId: String): TTAdConfig {
         return TTAdConfig.Builder()
             .appId(appId)
-            .supportMultiProcess(false)
+            .supportMultiProcess(multiProcessSupport)
             .data("[{\"name\":\"mediation\",\"value\":\"Helium\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
             .build()
     }
@@ -287,11 +297,11 @@ class PangleAdapter : PartnerAdapter {
                 LogController.d("$TAG Pangle setting banner with size (w: $widthDp, h: $heightDp)")
 
                 AdSlot.Builder()
-                .setCodeId(request.partnerPlacement)
-                .setExpressViewAcceptedSize(
-                    widthDp,
-                    heightDp
-                ).build()
+                    .setCodeId(request.partnerPlacement)
+                    .setExpressViewAcceptedSize(
+                        widthDp,
+                        heightDp
+                    ).build()
             }
 
             bannerAd.loadBannerExpressAd(adSlot, object : TTAdNative.NativeExpressAdListener {
