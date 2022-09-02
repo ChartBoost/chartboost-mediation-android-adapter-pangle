@@ -2,7 +2,6 @@ package com.chartboost.helium.pangleadapter
 
 import android.app.Activity
 import android.content.Context
-import android.util.Size
 import android.view.View
 import com.bytedance.sdk.openadsdk.*
 import com.chartboost.heliumsdk.domain.*
