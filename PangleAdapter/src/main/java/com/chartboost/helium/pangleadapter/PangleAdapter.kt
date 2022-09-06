@@ -5,7 +5,10 @@ import android.content.Context
 import android.view.View
 import com.bytedance.sdk.openadsdk.*
 import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.LogController
+import com.chartboost.heliumsdk.utils.PartnerLogController
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterFailureEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterSuccessEvents.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -21,7 +24,10 @@ class PangleAdapter : PartnerAdapter {
         public var multiProcessSupport = false
             set(value) {
                 field = value
-                LogController.d("Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.")
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Pangle's multi-process support is ${if (value) "enabled" else "disabled"}."
+                )
             }
 
         /**
@@ -80,6 +86,8 @@ class PangleAdapter : PartnerAdapter {
         context: Context,
         partnerConfiguration: PartnerConfiguration
     ): Result<Unit> {
+        PartnerLogController.log(SETUP_STARTED)
+
         return suspendCoroutine { continuation ->
             partnerConfiguration.credentials[APPLICATION_ID_KEY]?.let { appId ->
                 TTAdSdk.init(
@@ -89,20 +97,20 @@ class PangleAdapter : PartnerAdapter {
                         override fun success() {
                             continuation.resume(
                                 Result.success(
-                                    LogController.i("Pangle SDK successfully initialized.")
+                                    PartnerLogController.log(SETUP_SUCCEEDED)
                                 )
                             )
                         }
 
                         override fun fail(code: Int, message: String?) {
-                            LogController.e("Failed to initialize Pangle SDK: $code and error $message")
+                            PartnerLogController.log(SETUP_FAILED, "Code: $code. Error: $message")
                             continuation.resume(
                                 Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
                             )
                         }
                     })
             } ?: run {
-                LogController.e("Failed to initialize Pangle SDK: Missing application ID.")
+                PartnerLogController.log(SETUP_FAILED, "Missing application ID.")
                 continuation.resumeWith(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
             }
         }
@@ -194,22 +202,28 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun fetchBidderInformation(
         context: Context,
         request: PreBidRequest
-    ): Map<String, String> = emptyMap()
+    ): Map<String, String> {
+        PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
+        PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
+        return emptyMap()
+    }
 
     /**
      * Attempt to load a Pangle ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     override suspend fun load(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
+        PartnerLogController.log(LOAD_STARTED)
+
         return when (request.format) {
             AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
             AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
@@ -226,17 +240,20 @@ class PangleAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
+        PartnerLogController.log(SHOW_STARTED)
+
         val listener = listeners.remove(partnerAd.request.heliumPlacement)
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
+                PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
             AdFormat.INTERSTITIAL -> {
                 (context as? Activity)?.let { activity ->
                     showInterstitialAd(activity, partnerAd, listener)
                 } ?: run {
-                    LogController.e("Pangle failed to show interstitial ad. Activity context is required.")
+                    PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
                     Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
                 }
             }
@@ -244,7 +261,7 @@ class PangleAdapter : PartnerAdapter {
                 (context as? Activity)?.let { activity ->
                     showRewardedAd(activity, partnerAd, listener)
                 } ?: run {
-                    LogController.e("Pangle failed to show rewarded ad. Activity context is required.")
+                    PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
                     Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
                 }
             }
@@ -259,10 +276,13 @@ class PangleAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
      */
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
+        PartnerLogController.log(INVALIDATE_STARTED)
+
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
                 // Pangle does not have destroy methods for their fullscreen ads.
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             }
         }
@@ -272,14 +292,14 @@ class PangleAdapter : PartnerAdapter {
      * Attempt to load a Pangle banner ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadBannerAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
@@ -288,7 +308,11 @@ class PangleAdapter : PartnerAdapter {
             val adSlot = request.size?.let {
                 val widthDp = it.width.toFloat()
                 val heightDp = it.height.toFloat()
-                LogController.d("Pangle setting banner with size (w: $widthDp, h: $heightDp)")
+
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Pangle setting banner with size (w: $widthDp, h: $heightDp)"
+                )
 
                 AdSlot.Builder()
                     .setCodeId(request.partnerPlacement)
@@ -300,7 +324,7 @@ class PangleAdapter : PartnerAdapter {
 
             bannerAd.loadBannerExpressAd(adSlot, object : TTAdNative.NativeExpressAdListener {
                 override fun onError(code: Int, message: String?) {
-                    LogController.d("Failed to load Pangle banner ad. Pangle code: $code with message: $message")
+                    PartnerLogController.log(LOAD_FAILED, "Code: $code. Error: $message")
                     continuation.resume(
                         Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
                     )
@@ -308,9 +332,21 @@ class PangleAdapter : PartnerAdapter {
 
                 override fun onNativeExpressAdLoad(bannerAds: MutableList<TTNativeExpressAd>?) {
                     bannerAds?.firstOrNull()?.let { banner ->
+                        PartnerLogController.log(LOAD_SUCCEEDED)
+                        continuation.resume(
+                            Result.success(
+                                PartnerAd(
+                                    ad = banner,
+                                    details = emptyMap(),
+                                    request = request
+                                )
+                            )
+                        )
+
                         banner.setExpressInteractionListener(object :
                             TTNativeExpressAd.ExpressAdInteractionListener {
                             override fun onAdClicked(bannerView: View?, type: Int) {
+                                PartnerLogController.log(DID_CLICK)
                                 partnerAdListener.onPartnerAdClicked(
                                     PartnerAd(
                                         ad = bannerView,
@@ -330,7 +366,7 @@ class PangleAdapter : PartnerAdapter {
                                 code: Int
                             ) {
                                 banner.destroy()
-                                LogController.e("Failed to render Pangle banner ad.")
+                                PartnerLogController.log(SHOW_FAILED)
                                 continuation.resumeWith(
                                     Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
                                 )
@@ -341,6 +377,7 @@ class PangleAdapter : PartnerAdapter {
                                 width: Float,
                                 height: Float
                             ) {
+                                PartnerLogController.log(SHOW_SUCCEEDED)
                                 continuation.resume(
                                     Result.success(
                                         PartnerAd(
@@ -354,7 +391,7 @@ class PangleAdapter : PartnerAdapter {
                         })
                         banner.render()
                     } ?: run {
-                        LogController.d("No Pangle banner found.")
+                        PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                         continuation.resume(
                             Result.failure(
                                 HeliumAdException(HeliumErrorCode.PARTNER_ERROR)
@@ -370,14 +407,14 @@ class PangleAdapter : PartnerAdapter {
      * Attempt to load a Pangle interstitial ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing data to load the ad with.
+     * @param request An [PartnerAdLoadRequest] instance containing data to load the ad with.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadInterstitialAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
@@ -391,9 +428,9 @@ class PangleAdapter : PartnerAdapter {
             interstitialAd.loadFullScreenVideoAd(
                 adSlot, object : TTAdNative.FullScreenVideoAdListener {
                     override fun onError(code: Int, message: String?) {
-                        LogController.d(
-                            "Failed to load Pangle interstitial ad. " +
-                                    "Pangle code: $code with message: $message"
+                        PartnerLogController.log(
+                            LOAD_FAILED,
+                            "Code: $code. Error: $message"
                         )
                         continuation.resume(
                             Result.failure(
@@ -403,6 +440,7 @@ class PangleAdapter : PartnerAdapter {
                     }
 
                     override fun onFullScreenVideoAdLoad(videoAd: TTFullScreenVideoAd?) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
                         continuation.resume(
                             Result.success(
                                 PartnerAd(
@@ -423,14 +461,14 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Attempt to load a Pangle rewarded ad.
      * @param context The current [Context].
-     * @param request The [AdLoadRequest] containing relevant data for the current ad load call.
+     * @param request The [PartnerAdLoadRequest] containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadRewardedAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
@@ -445,9 +483,9 @@ class PangleAdapter : PartnerAdapter {
             rewardedAd.loadRewardVideoAd(
                 adSlot, object : TTAdNative.RewardVideoAdListener {
                     override fun onError(code: Int, message: String?) {
-                        LogController.d(
-                            "Failed to load Pangle rewarded ad. " +
-                                    "Pangle code: $code with message: $message"
+                        PartnerLogController.log(
+                            LOAD_FAILED,
+                            "Code: $code. Error: $message"
                         )
                         continuation.resume(
                             Result.failure(
@@ -457,6 +495,7 @@ class PangleAdapter : PartnerAdapter {
                     }
 
                     override fun onRewardVideoAdLoad(videoAd: TTRewardVideoAd?) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
                         continuation.resume(
                             Result.success(
                                 PartnerAd(
@@ -484,52 +523,56 @@ class PangleAdapter : PartnerAdapter {
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
-    private fun showInterstitialAd(
+    private suspend fun showInterstitialAd(
         activity: Activity,
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
-        return (partnerAd.ad as? TTFullScreenVideoAd)?.let { ad ->
-            val pangleVideoListener =
-                object : TTFullScreenVideoAd.FullScreenVideoAdInteractionListener {
-                    override fun onAdShow() {
-                        Result.success(partnerAd)
-                    }
+        (partnerAd.ad as? TTFullScreenVideoAd)?.let { ad ->
+            return suspendCoroutine { continuation ->
+                val pangleVideoListener =
+                    object : TTFullScreenVideoAd.FullScreenVideoAdInteractionListener {
+                        override fun onAdShow() {
+                            PartnerLogController.log(SHOW_SUCCEEDED)
+                            continuation.resume(Result.success(partnerAd))
+                        }
 
-                    override fun onAdVideoBarClick() {
-                        listener?.onPartnerAdClicked(partnerAd) ?: run {
-                            LogController.e(
+                        override fun onAdVideoBarClick() {
+                            PartnerLogController.log(DID_CLICK)
+                            listener?.onPartnerAdClicked(partnerAd) ?: PartnerLogController.log(
+                                CUSTOM,
                                 "Unable to fire onPartnerAdClicked for Pangle adapter. " +
                                         "Listener is null."
                             )
                         }
-                    }
 
-                    override fun onAdClose() {
-                        listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                            LogController.e(
-                                "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                        "Listener is null."
-                            )
+                        override fun onAdClose() {
+                            PartnerLogController.log(DID_TRACK_IMPRESSION)
+                            listener?.onPartnerAdDismissed(partnerAd, null)
+                                ?: PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                        }
+
+                        override fun onVideoComplete() {
+                            // NO-OP
+                        }
+
+                        override fun onSkippedVideo() {
+                            // NO-OP
                         }
                     }
 
-                    override fun onVideoComplete() {
-                        // NO-OP
-                    }
-
-                    override fun onSkippedVideo() {
-                        // NO-OP
-                    }
+                ad.apply {
+                    setFullScreenVideoAdInteractionListener(pangleVideoListener)
+                    showFullScreenVideoAd(activity)
                 }
-            ad.apply {
-                setFullScreenVideoAdInteractionListener(pangleVideoListener)
-                showFullScreenVideoAd(activity)
             }
-            Result.success(partnerAd)
         } ?: run {
-            LogController.e("Failed to show Pangle interstitial ad. Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            PartnerLogController.log(SHOW_FAILED, "Ad is null.")
+            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
 
@@ -542,74 +585,76 @@ class PangleAdapter : PartnerAdapter {
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
-    private fun showRewardedAd(
+    private suspend fun showRewardedAd(
         activity: Activity,
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
-        return (partnerAd.ad as? TTRewardVideoAd)?.let { ad ->
-            val pangleVideoListener =
-                object : TTRewardVideoAd.RewardAdInteractionListener {
-                    override fun onAdShow() {
-                        Result.success(partnerAd)
-                    }
+        (partnerAd.ad as? TTRewardVideoAd)?.let { ad ->
+            return suspendCoroutine { continuation ->
+                val pangleVideoListener =
+                    object : TTRewardVideoAd.RewardAdInteractionListener {
+                        override fun onAdShow() {
+                            PartnerLogController.log(SHOW_SUCCEEDED)
+                            continuation.resume(Result.success(partnerAd))
+                        }
 
-                    override fun onAdVideoBarClick() {
-                        listener?.onPartnerAdClicked(partnerAd) ?: run {
-                            LogController.e(
-                                "Unable to fire onPartnerAdClicked for Pangle adapter. " +
-                                        "Listener is null."
+                        override fun onAdVideoBarClick() {
+                            PartnerLogController.log(DID_CLICK)
+                            listener?.onPartnerAdClicked(partnerAd) ?: PartnerLogController.log(
+                                CUSTOM,
+                                "Unable to fire onPartnerAdClicked for Pangle adapter. Listener is null."
                             )
                         }
-                    }
 
-                    override fun onAdClose() {
-                        listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                            LogController.e(
-                                "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                        "Listener is null."
-                            )
+                        override fun onAdClose() {
+                            PartnerLogController.log(DID_DISMISS)
+                            listener?.onPartnerAdDismissed(partnerAd, null)
+                                ?: PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdDismissed for Pangle adapter. Listener is null."
+                                )
                         }
-                    }
 
-                    override fun onVideoComplete() {
-                        // NO-OP
-                    }
+                        override fun onVideoComplete() {
+                            // NO-OP
+                        }
 
-                    override fun onVideoError() {
-                        // NO-OP
-                    }
+                        override fun onVideoError() {
+                            // NO-OP
+                        }
 
-                    override fun onRewardVerify(
-                        rewardVerify: Boolean,
-                        rewardAmount: Int,
-                        rewardName: String?,
-                        errorCode: Int,
-                        errorMessage: String?
-                    ) {
-                        listener?.onPartnerAdRewarded(
-                            partnerAd,
-                            Reward(rewardAmount, rewardName ?: "")
-                        ) ?: run {
-                            LogController.e(
+                        override fun onRewardVerify(
+                            rewardVerify: Boolean,
+                            rewardAmount: Int,
+                            rewardName: String?,
+                            errorCode: Int,
+                            errorMessage: String?
+                        ) {
+                            PartnerLogController.log(DID_REWARD)
+                            listener?.onPartnerAdRewarded(
+                                partnerAd,
+                                Reward(rewardAmount, rewardName ?: "")
+                            ) ?: PartnerLogController.log(
+                                CUSTOM,
                                 "Unable to fire onPartnerAdRewarded for Pangle adapter. " +
                                         "Listener is null."
                             )
                         }
+
+                        override fun onSkippedVideo() {
+                            // NO-OP
+                        }
                     }
 
-                    override fun onSkippedVideo() {
-                        // NO-OP
-                    }
+                ad.apply {
+                    setRewardAdInteractionListener(pangleVideoListener)
+                    showRewardVideoAd(activity)
                 }
-            ad.apply {
-                setRewardAdInteractionListener(pangleVideoListener)
-                showRewardVideoAd(activity)
             }
-            Result.success(partnerAd)
         } ?: run {
-            LogController.e("Failed to show Pangle rewarded ad. Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            PartnerLogController.log(SHOW_FAILED, "Ad is null.")
+            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
 
@@ -623,9 +668,11 @@ class PangleAdapter : PartnerAdapter {
     private fun destroyBannerAd(partnerAd: PartnerAd): Result<PartnerAd> {
         return (partnerAd.ad as? TTNativeExpressAd)?.let { bannerAd ->
             bannerAd.destroy()
+
+            PartnerLogController.log(INVALIDATE_SUCCEEDED)
             Result.success(partnerAd)
         } ?: run {
-            LogController.w("Failed to destroy Pangle banner ad. Ad is null.")
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
