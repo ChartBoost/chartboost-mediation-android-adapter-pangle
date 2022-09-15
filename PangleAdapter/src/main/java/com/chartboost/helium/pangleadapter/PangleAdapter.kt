@@ -427,6 +427,9 @@ class PangleAdapter : PartnerAdapter {
                 .build()
             interstitialAd.loadFullScreenVideoAd(
                 adSlot, object : TTAdNative.FullScreenVideoAdListener {
+                    // Variable to store a Pangle TTFullScreenVideoAd.
+                    var fullScreenAd : TTFullScreenVideoAd? = null
+
                     override fun onError(code: Int, message: String?) {
                         PartnerLogController.log(
                             LOAD_FAILED,
@@ -439,20 +442,37 @@ class PangleAdapter : PartnerAdapter {
                         )
                     }
 
+                    /**
+                     * This method is executed when an ad material is loaded successfully.
+                     */
                     override fun onFullScreenVideoAdLoad(videoAd: TTFullScreenVideoAd?) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        continuation.resume(
-                            Result.success(
-                                PartnerAd(
-                                    ad = videoAd,
-                                    details = emptyMap(),
-                                    request = request
-                                )
-                            )
-                        )
+                        fullScreenAd = videoAd
                     }
 
-                    override fun onFullScreenVideoCached() {}
+                    /**
+                     * This method is executed when the video file has finished loading.
+                     */
+                    override fun onFullScreenVideoCached() {
+                        fullScreenAd?.let {
+                            PartnerLogController.log(LOAD_SUCCEEDED)
+                            continuation.resume(
+                                Result.success(
+                                    PartnerAd(
+                                        ad = it,
+                                        details = emptyMap(),
+                                        request = request
+                                    )
+                                )
+                            )
+                        } ?: run {
+                            PartnerLogController.log(LOAD_FAILED)
+                            continuation.resume(
+                                Result.failure(
+                                    HeliumAdException(HeliumErrorCode.NO_FILL)
+                                )
+                            )
+                        }
+                    }
                 }
             )
         }
@@ -482,6 +502,9 @@ class PangleAdapter : PartnerAdapter {
 
             rewardedAd.loadRewardVideoAd(
                 adSlot, object : TTAdNative.RewardVideoAdListener {
+                    // Variable to store a Pangle TTRewardVideoAd.
+                    var rewardVideoAd : TTRewardVideoAd? = null
+
                     override fun onError(code: Int, message: String?) {
                         PartnerLogController.log(
                             LOAD_FAILED,
@@ -494,21 +517,36 @@ class PangleAdapter : PartnerAdapter {
                         )
                     }
 
+                    /**
+                     * This method is executed when an ad material is loaded successfully.
+                     */
                     override fun onRewardVideoAdLoad(videoAd: TTRewardVideoAd?) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        continuation.resume(
-                            Result.success(
-                                PartnerAd(
-                                    ad = videoAd,
-                                    details = emptyMap(),
-                                    request = request
-                                )
-                            )
-                        )
+                        rewardVideoAd = videoAd
                     }
 
+                    /**
+                     * This method is executed when the video file has finished loading.
+                     */
                     override fun onRewardVideoCached() {
-                        // NO-OP
+                        rewardVideoAd?.let {
+                            PartnerLogController.log(LOAD_SUCCEEDED)
+                            continuation.resume(
+                                Result.success(
+                                    PartnerAd(
+                                        ad = it,
+                                        details = emptyMap(),
+                                        request = request
+                                    )
+                                )
+                            )
+                        } ?: run {
+                            PartnerLogController.log(LOAD_FAILED)
+                            continuation.resume(
+                                Result.failure(
+                                    HeliumAdException(HeliumErrorCode.NO_FILL)
+                                )
+                            )
+                        }
                     }
                 }
             )
