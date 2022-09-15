@@ -427,7 +427,7 @@ class PangleAdapter : PartnerAdapter {
                 .build()
             interstitialAd.loadFullScreenVideoAd(
                 adSlot, object : TTAdNative.FullScreenVideoAdListener {
-                    // Variable to get a Pangle TTFullScreenVideoAd.
+                    // Variable to store a Pangle TTFullScreenVideoAd.
                     var fullScreenAd : TTFullScreenVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
@@ -446,7 +446,6 @@ class PangleAdapter : PartnerAdapter {
                      * This method is executed when an ad material is loaded successfully.
                      */
                     override fun onFullScreenVideoAdLoad(videoAd: TTFullScreenVideoAd?) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
                         fullScreenAd = videoAd
                     }
 
@@ -455,7 +454,7 @@ class PangleAdapter : PartnerAdapter {
                      */
                     override fun onFullScreenVideoCached() {
                         fullScreenAd?.let {
-                            PartnerLogController.log(CUSTOM, "Pangle full screen video cached.")
+                            PartnerLogController.log(LOAD_SUCCEEDED)
                             continuation.resume(
                                 Result.success(
                                     PartnerAd(
@@ -503,7 +502,7 @@ class PangleAdapter : PartnerAdapter {
 
             rewardedAd.loadRewardVideoAd(
                 adSlot, object : TTAdNative.RewardVideoAdListener {
-                    // Variable to get a Pangle TTRewardVideoAd.
+                    // Variable to store a Pangle TTRewardVideoAd.
                     var rewardVideoAd : TTRewardVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
@@ -522,7 +521,6 @@ class PangleAdapter : PartnerAdapter {
                      * This method is executed when an ad material is loaded successfully.
                      */
                     override fun onRewardVideoAdLoad(videoAd: TTRewardVideoAd?) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
                         rewardVideoAd = videoAd
                     }
 
@@ -531,7 +529,7 @@ class PangleAdapter : PartnerAdapter {
                      */
                     override fun onRewardVideoCached() {
                         rewardVideoAd?.let {
-                            PartnerLogController.log(CUSTOM, "Pangle rewarded video cached.")
+                            PartnerLogController.log(LOAD_SUCCEEDED)
                             continuation.resume(
                                 Result.success(
                                     PartnerAd(
