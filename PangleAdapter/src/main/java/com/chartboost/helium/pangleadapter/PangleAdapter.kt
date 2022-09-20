@@ -89,7 +89,8 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCoroutine { continuation ->
-            partnerConfiguration.credentials[APPLICATION_ID_KEY]?.let { appId ->
+            partnerConfiguration.credentials.optString(APPLICATION_ID_KEY)
+                .takeIf { it.isNotBlank() }?.let { appId ->
                 TTAdSdk.init(
                     context.applicationContext,
                     buildConfig(appId),
