@@ -89,28 +89,31 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCoroutine { continuation ->
-            partnerConfiguration.credentials.optString(APPLICATION_ID_KEY)
-                .takeIf { it.isNotBlank() }?.let { appId ->
-                TTAdSdk.init(
-                    context.applicationContext,
-                    buildConfig(appId),
-                    object : TTAdSdk.InitCallback {
-                        override fun success() {
-                            continuation.resume(
-                                Result.success(
-                                    PartnerLogController.log(SETUP_SUCCEEDED)
+            partnerConfiguration.credentials.optString(APPLICATION_ID_KEY).trim()
+                .takeIf { it.isNotEmpty() }?.let { appId ->
+                    TTAdSdk.init(
+                        context.applicationContext,
+                        buildConfig(appId),
+                        object : TTAdSdk.InitCallback {
+                            override fun success() {
+                                continuation.resume(
+                                    Result.success(
+                                        PartnerLogController.log(SETUP_SUCCEEDED)
+                                    )
                                 )
-                            )
-                        }
+                            }
 
-                        override fun fail(code: Int, message: String?) {
-                            PartnerLogController.log(SETUP_FAILED, "Code: $code. Error: $message")
-                            continuation.resume(
-                                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
-                            )
-                        }
-                    })
-            } ?: run {
+                            override fun fail(code: Int, message: String?) {
+                                PartnerLogController.log(
+                                    SETUP_FAILED,
+                                    "Code: $code. Error: $message"
+                                )
+                                continuation.resume(
+                                    Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+                                )
+                            }
+                        })
+                } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing application ID.")
                 continuation.resumeWith(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
             }
@@ -429,7 +432,7 @@ class PangleAdapter : PartnerAdapter {
             interstitialAd.loadFullScreenVideoAd(
                 adSlot, object : TTAdNative.FullScreenVideoAdListener {
                     // Variable to store a Pangle TTFullScreenVideoAd.
-                    var fullScreenAd : TTFullScreenVideoAd? = null
+                    var fullScreenAd: TTFullScreenVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
                         PartnerLogController.log(
@@ -504,7 +507,7 @@ class PangleAdapter : PartnerAdapter {
             rewardedAd.loadRewardVideoAd(
                 adSlot, object : TTAdNative.RewardVideoAdListener {
                     // Variable to store a Pangle TTRewardVideoAd.
-                    var rewardVideoAd : TTRewardVideoAd? = null
+                    var rewardVideoAd: TTRewardVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
                         PartnerLogController.log(
