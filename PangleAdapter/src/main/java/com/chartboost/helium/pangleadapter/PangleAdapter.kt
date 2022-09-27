@@ -7,8 +7,6 @@ import com.bytedance.sdk.openadsdk.*
 import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterFailureEvents.*
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterSuccessEvents.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -141,6 +139,7 @@ class PangleAdapter : PartnerAdapter {
      * @param gdprApplies True if GDPR applies, false otherwise.
      */
     override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
+        PartnerLogController.log(if (gdprApplies) GDPR_APPLICABLE else GDPR_NOT_APPLICABLE)
         this.gdprApplies = gdprApplies
     }
 
@@ -153,9 +152,18 @@ class PangleAdapter : PartnerAdapter {
     override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         TTAdSdk.setGdpr(
             when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> 0
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> 1
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> -1
+                GdprConsentStatus.GDPR_CONSENT_GRANTED -> {
+                    PartnerLogController.log(GDPR_CONSENT_GRANTED)
+                    0
+                }
+                GdprConsentStatus.GDPR_CONSENT_DENIED -> {
+                    PartnerLogController.log(GDPR_CONSENT_DENIED)
+                    1
+                }
+                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> {
+                    PartnerLogController.log(GDPR_CONSENT_UNKNOWN)
+                    -1
+                }
             }
         )
     }
@@ -164,18 +172,24 @@ class PangleAdapter : PartnerAdapter {
      * Notify Pangle of the CCPA compliance.
      *
      * @param context The current [Context].
-     * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
+     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
      * @param privacyString The CCPA privacy String.
      */
     override fun setCcpaConsent(
         context: Context,
-        hasGivenCcpaConsent: Boolean,
+        hasGrantedCcpaConsent: Boolean,
         privacyString: String?
     ) {
         TTAdSdk.setCCPA(
-            when (hasGivenCcpaConsent) {
-                true -> 0
-                false -> 1
+            when (hasGrantedCcpaConsent) {
+                true -> {
+                    PartnerLogController.log(CCPA_CONSENT_GRANTED)
+                    0
+                }
+                false -> {
+                    PartnerLogController.log(CCPA_CONSENT_DENIED)
+                    1
+                }
             }
         )
     }
@@ -189,8 +203,14 @@ class PangleAdapter : PartnerAdapter {
     override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
         TTAdSdk.setCoppa(
             when (isSubjectToCoppa) {
-                true -> 1
-                false -> 0
+                true -> {
+                    PartnerLogController.log(COPPA_SUBJECT)
+                    1
+                }
+                false -> {
+                    PartnerLogController.log(COPPA_NOT_SUBJECT)
+                    0
+                }
             }
         )
     }
