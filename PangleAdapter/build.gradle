@@ -77,14 +77,8 @@ dependencies {
     implementation 'com.pangle.global:ads-sdk:4.3.0.4'
 
     //Partner SDK Dependencies
-    implementation 'androidx.appcompat:appcompat:1.4.2'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.6.10"
-
-    //Tests
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 }
 
 artifactory {
