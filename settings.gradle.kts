@@ -7,6 +7,6 @@ pluginManagement {
 }
 
 rootProject.name = "PangleAdapter"
-include ':PangleAdapter'
-include ':android-helium-sdk'
-include ':Helium'
+include(":PangleAdapter")
+include(":android-helium-sdk")
+include(":Helium")
