@@ -107,13 +107,13 @@ class PangleAdapter : PartnerAdapter {
                                     "Code: $code. Error: $message"
                                 )
                                 continuation.resume(
-                                    Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+                                    Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
                                 )
                             }
                         })
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing application ID.")
-                continuation.resumeWith(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
+                continuation.resumeWith(Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
             }
         }
     }
@@ -278,7 +278,7 @@ class PangleAdapter : PartnerAdapter {
                     showInterstitialAd(activity, partnerAd, listener)
                 } ?: run {
                     PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
-                    Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
             AdFormat.REWARDED -> {
@@ -286,7 +286,7 @@ class PangleAdapter : PartnerAdapter {
                     showRewardedAd(activity, partnerAd, listener)
                 } ?: run {
                     PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
-                    Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
         }
@@ -350,7 +350,7 @@ class PangleAdapter : PartnerAdapter {
                 override fun onError(code: Int, message: String?) {
                     PartnerLogController.log(LOAD_FAILED, "Code: $code. Error: $message")
                     continuation.resume(
-                        Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+                        Result.failure(HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN))
                     )
                 }
 
@@ -392,7 +392,7 @@ class PangleAdapter : PartnerAdapter {
                                 banner.destroy()
                                 PartnerLogController.log(SHOW_FAILED)
                                 continuation.resumeWith(
-                                    Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
+                                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN))
                                 )
                             }
 
@@ -418,7 +418,7 @@ class PangleAdapter : PartnerAdapter {
                         PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumErrorCode.PARTNER_ERROR)
+                                HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND)
                             )
                         )
                     }
@@ -461,7 +461,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumErrorCode.NO_FILL)
+                                HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN)
                             )
                         )
                     }
@@ -492,7 +492,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             continuation.resume(
                                 Result.failure(
-                                    HeliumAdException(HeliumErrorCode.NO_FILL)
+                                    HeliumAdException(HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
                                 )
                             )
                         }
@@ -536,7 +536,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumErrorCode.NO_FILL)
+                                HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN)
                             )
                         )
                     }
@@ -567,7 +567,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             continuation.resume(
                                 Result.failure(
-                                    HeliumAdException(HeliumErrorCode.NO_FILL)
+                                    HeliumAdException(HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
                                 )
                             )
                         }
@@ -634,7 +634,7 @@ class PangleAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -716,7 +716,7 @@ class PangleAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -735,7 +735,7 @@ class PangleAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 }
