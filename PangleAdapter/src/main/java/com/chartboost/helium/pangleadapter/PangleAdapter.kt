@@ -35,11 +35,6 @@ class PangleAdapter : PartnerAdapter {
     }
 
     /**
-     * Indicate whether GDPR currently applies to the user.
-     */
-    private var gdprApplies: Boolean? = null
-
-    /**
      * Get the Pangle SDK version.
      */
     override val partnerSdkVersion: String
@@ -133,23 +128,25 @@ class PangleAdapter : PartnerAdapter {
     }
 
     /**
-     * Save the current GDPR applicability state for later use.
+     * Notify the Pangle SDK of the GDPR applicability and consent status.
      *
      * @param context The current [Context].
-     * @param gdprApplies True if GDPR applies, false otherwise.
+     * @param applies True if GDPR applies, false otherwise.
+     * @param gdprConsentStatus The user's GDPR consent status.
      */
-    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
-        PartnerLogController.log(if (gdprApplies) GDPR_APPLICABLE else GDPR_NOT_APPLICABLE)
-        this.gdprApplies = gdprApplies
-    }
+    override fun setGdpr(
+        context: Context,
+        applies: Boolean?,
+        gdprConsentStatus: GdprConsentStatus
+    ) {
+        PartnerLogController.log(
+            when (applies) {
+                true -> GDPR_APPLICABLE
+                false -> GDPR_NOT_APPLICABLE
+                else -> GDPR_UNKNOWN
+            }
+        )
 
-    /**
-     * Notify Pangle of user GDPR consent.
-     *
-     * @param context The current [Context].
-     * @param gdprConsentStatus The user's current GDPR consent status.
-     */
-    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         TTAdSdk.setGdpr(
             when (gdprConsentStatus) {
                 GdprConsentStatus.GDPR_CONSENT_GRANTED -> {
