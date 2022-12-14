@@ -691,10 +691,7 @@ class PangleAdapter : PartnerAdapter {
                             errorMessage: String?
                         ) {
                             PartnerLogController.log(DID_REWARD)
-                            listener?.onPartnerAdRewarded(
-                                partnerAd,
-                                Reward(rewardAmount, rewardName ?: "")
-                            ) ?: PartnerLogController.log(
+                            listener?.onPartnerAdRewarded(partnerAd) ?: PartnerLogController.log(
                                 CUSTOM,
                                 "Unable to fire onPartnerAdRewarded for Pangle adapter. " +
                                         "Listener is null."
