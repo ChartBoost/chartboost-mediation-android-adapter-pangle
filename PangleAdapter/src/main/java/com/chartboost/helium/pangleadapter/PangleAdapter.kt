@@ -43,9 +43,14 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Get the Pangle adapter version.
      *
-     * Note that the version string will be in the format of `Helium.Partner.Partner.Partner.Adapter`,
-     * in which `Helium` is the version of the Helium SDK, `Partner` is the major.minor.patch version
-     * of the partner SDK, and `Adapter` is the version of the adapter.
+     * You may version the adapter using any preferred convention, but it is recommended to apply the
+     * following format if the adapter will be published by Helium:
+     *
+     * Helium.Partner.Adapter
+     *
+     * "Helium" represents the Helium SDK’s major version that is compatible with this adapter. This must be 1 digit.
+     * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
+     * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
      */
     override val adapterVersion: String
         get() = BuildConfig.HELIUM_PANGLE_ADAPTER_VERSION
@@ -114,9 +119,10 @@ class PangleAdapter : PartnerAdapter {
     }
 
     /**
-     * Build the necessery configurations that the Pangle SDK requires on [setUp].
+     * Build the necessary configurations that the Pangle SDK requires on [setUp].
      *
      * @param appId an application ID that will be set in the configuration.
+     *
      * @return a [TTAdConfig] object with the necessary configurations.
      */
     private fun buildConfig(appId: String): TTAdConfig {
@@ -501,6 +507,7 @@ class PangleAdapter : PartnerAdapter {
 
     /**
      * Attempt to load a Pangle rewarded ad.
+     *
      * @param context The current [Context].
      * @param request The [PartnerAdLoadRequest] containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
@@ -576,6 +583,7 @@ class PangleAdapter : PartnerAdapter {
 
     /**
      * Attempt to show a Pangle interstitial ad.
+     *
      * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Pangle ad to be shown.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
