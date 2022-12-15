@@ -181,7 +181,7 @@ class PangleAdapter : PartnerAdapter {
     override fun setCcpaConsent(
         context: Context,
         hasGrantedCcpaConsent: Boolean,
-        privacyString: String?
+        privacyString: String
     ) {
         TTAdSdk.setCCPA(
             when (hasGrantedCcpaConsent) {
