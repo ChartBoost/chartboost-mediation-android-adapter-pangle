@@ -125,13 +125,11 @@ class PangleAdapter : PartnerAdapter {
      *
      * @return a [TTAdConfig] object with the necessary configurations.
      */
-    private fun buildConfig(appId: String): TTAdConfig {
-        return TTAdConfig.Builder()
-            .appId(appId)
-            .supportMultiProcess(multiProcessSupport)
-            .data("[{\"name\":\"mediation\",\"value\":\"Helium\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
-            .build()
-    }
+    private fun buildConfig(appId: String) = TTAdConfig.Builder()
+        .appId(appId)
+        .supportMultiProcess(multiProcessSupport)
+        .data("[{\"name\":\"mediation\",\"value\":\"Helium\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
+        .build()
 
     /**
      * Notify the Pangle SDK of the GDPR applicability and consent status.
@@ -384,7 +382,7 @@ class PangleAdapter : PartnerAdapter {
                             }
 
                             override fun onAdShow(bannerView: View?, type: Int) {
-                                //NO-OP
+                                // NO-OP
                             }
 
                             override fun onRenderFail(
@@ -454,7 +452,6 @@ class PangleAdapter : PartnerAdapter {
                 .build()
             interstitialAd.loadFullScreenVideoAd(
                 adSlot, object : TTAdNative.FullScreenVideoAdListener {
-                    // Variable to store a Pangle TTFullScreenVideoAd.
                     var fullScreenAd: TTFullScreenVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
@@ -469,16 +466,10 @@ class PangleAdapter : PartnerAdapter {
                         )
                     }
 
-                    /**
-                     * This method is executed when an ad material is loaded successfully.
-                     */
                     override fun onFullScreenVideoAdLoad(videoAd: TTFullScreenVideoAd?) {
                         fullScreenAd = videoAd
                     }
 
-                    /**
-                     * This method is executed when the video file has finished loading.
-                     */
                     override fun onFullScreenVideoCached() {
                         fullScreenAd?.let {
                             PartnerLogController.log(LOAD_SUCCEEDED)
@@ -530,7 +521,6 @@ class PangleAdapter : PartnerAdapter {
 
             rewardedAd.loadRewardVideoAd(
                 adSlot, object : TTAdNative.RewardVideoAdListener {
-                    // Variable to store a Pangle TTRewardVideoAd.
                     var rewardVideoAd: TTRewardVideoAd? = null
 
                     override fun onError(code: Int, message: String?) {
@@ -545,16 +535,10 @@ class PangleAdapter : PartnerAdapter {
                         )
                     }
 
-                    /**
-                     * This method is executed when an ad material is loaded successfully.
-                     */
                     override fun onRewardVideoAdLoad(videoAd: TTRewardVideoAd?) {
                         rewardVideoAd = videoAd
                     }
 
-                    /**
-                     * This method is executed when the video file has finished loading.
-                     */
                     override fun onRewardVideoCached() {
                         rewardVideoAd?.let {
                             PartnerLogController.log(LOAD_SUCCEEDED)
