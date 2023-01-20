@@ -7,6 +7,9 @@ import com.bytedance.sdk.openadsdk.*
 import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -87,7 +90,10 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCoroutine { continuation ->
-            partnerConfiguration.credentials.optString(APPLICATION_ID_KEY).trim()
+            Json.decodeFromJsonElement<String>(
+                (partnerConfiguration.credentials as JsonObject).getValue(APPLICATION_ID_KEY)
+            )
+                .trim()
                 .takeIf { it.isNotEmpty() }?.let { appId ->
                     TTAdSdk.init(
                         context.applicationContext,
