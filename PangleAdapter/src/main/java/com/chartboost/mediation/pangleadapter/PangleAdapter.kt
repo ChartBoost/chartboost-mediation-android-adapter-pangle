@@ -5,7 +5,7 @@
  * license that can be found in the LICENSE file.
  */
 
-package com.chartboost.helium.pangleadapter
+package com.chartboost.mediation.pangleadapter
 
 import android.app.Activity
 import android.content.Context
@@ -21,7 +21,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 /**
- * The Helium Pangle SDK adapter.
+ * The Chartboost Mediation Pangle SDK adapter.
  */
 class PangleAdapter : PartnerAdapter {
     companion object {
@@ -54,16 +54,16 @@ class PangleAdapter : PartnerAdapter {
      * Get the Pangle adapter version.
      *
      * You may version the adapter using any preferred convention, but it is recommended to apply the
-     * following format if the adapter will be published by Helium:
+     * following format if the adapter will be published by Chartboost Mediation:
      *
-     * Helium.Partner.Adapter
+     * Chartboost Mediation.Partner.Adapter
      *
-     * "Helium" represents the Helium SDK’s major version that is compatible with this adapter. This must be 1 digit.
+     * "Chartboost Mediation" represents the Chartboost Mediation SDK’s major version that is compatible with this adapter. This must be 1 digit.
      * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
      * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
      */
     override val adapterVersion: String
-        get() = BuildConfig.HELIUM_PANGLE_ADAPTER_VERSION
+        get() = BuildConfig.CHARTBOOST_MEDIATION_PANGLE_ADAPTER_VERSION
 
     /**
      * Get the partner name for internal uses.
@@ -78,7 +78,7 @@ class PangleAdapter : PartnerAdapter {
         get() = "Pangle"
 
     /**
-     * A map of Helium's listeners for the corresponding Helium placements.
+     * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
@@ -120,13 +120,13 @@ class PangleAdapter : PartnerAdapter {
                                     "Code: $code. Error: $message"
                                 )
                                 continuation.resume(
-                                    Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
+                                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
                                 )
                             }
                         })
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing application ID.")
-                continuation.resumeWith(Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
+                continuation.resumeWith(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
             }
         }
     }
@@ -141,7 +141,7 @@ class PangleAdapter : PartnerAdapter {
     private fun buildConfig(appId: String) = TTAdConfig.Builder()
         .appId(appId)
         .supportMultiProcess(multiProcessSupport)
-        .data("[{\"name\":\"mediation\",\"value\":\"Helium\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
+        .data("[{\"name\":\"mediation\",\"value\":\"Chartboost\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
         .build()
 
     /**
@@ -251,7 +251,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -280,7 +280,7 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
 
-        val listener = listeners.remove(partnerAd.request.heliumPlacement)
+        val listener = listeners.remove(partnerAd.request.chartboostPlacement)
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
@@ -292,7 +292,7 @@ class PangleAdapter : PartnerAdapter {
                     showInterstitialAd(activity, partnerAd, listener)
                 } ?: run {
                     PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
-                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
             AdFormat.REWARDED -> {
@@ -300,7 +300,7 @@ class PangleAdapter : PartnerAdapter {
                     showRewardedAd(activity, partnerAd, listener)
                 } ?: run {
                     PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
-                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
         }
@@ -331,7 +331,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -364,7 +364,7 @@ class PangleAdapter : PartnerAdapter {
                 override fun onError(code: Int, message: String?) {
                     PartnerLogController.log(LOAD_FAILED, "Code: $code. Error: $message")
                     continuation.resume(
-                        Result.failure(HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN))
+                        Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN))
                     )
                 }
 
@@ -406,7 +406,7 @@ class PangleAdapter : PartnerAdapter {
                                 banner.destroy()
                                 PartnerLogController.log(SHOW_FAILED)
                                 continuation.resumeWith(
-                                    Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN))
+                                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN))
                                 )
                             }
 
@@ -432,7 +432,7 @@ class PangleAdapter : PartnerAdapter {
                         PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND)
+                                ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND)
                             )
                         )
                     }
@@ -446,7 +446,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing data to load the ad with.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -456,7 +456,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.heliumPlacement] = partnerAdListener
+        listeners[request.chartboostPlacement] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val interstitialAd = TTAdSdk.getAdManager().createAdNative(context)
@@ -474,7 +474,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN)
+                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN)
                             )
                         )
                     }
@@ -499,7 +499,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             continuation.resume(
                                 Result.failure(
-                                    HeliumAdException(HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
+                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
                                 )
                             )
                         }
@@ -514,7 +514,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request The [PartnerAdLoadRequest] containing relevant data for the current ad load call.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -524,7 +524,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.heliumPlacement] = partnerAdListener
+        listeners[request.chartboostPlacement] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val rewardedAd = TTAdSdk.getAdManager().createAdNative(context)
@@ -543,7 +543,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         continuation.resume(
                             Result.failure(
-                                HeliumAdException(HeliumError.HE_LOAD_FAILURE_UNKNOWN)
+                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN)
                             )
                         )
                     }
@@ -568,7 +568,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             continuation.resume(
                                 Result.failure(
-                                    HeliumAdException(HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
+                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS)
                                 )
                             )
                         }
@@ -583,7 +583,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Pangle ad to be shown.
-     * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
@@ -636,7 +636,7 @@ class PangleAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -645,7 +645,7 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Pangle ad to be shown.
-     * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
@@ -715,7 +715,7 @@ class PangleAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -734,7 +734,7 @@ class PangleAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 }
