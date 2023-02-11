@@ -371,15 +371,6 @@ class PangleAdapter : PartnerAdapter {
                 override fun onNativeExpressAdLoad(bannerAds: MutableList<TTNativeExpressAd>?) {
                     bannerAds?.firstOrNull()?.let { banner ->
                         PartnerLogController.log(LOAD_SUCCEEDED)
-                        continuation.resume(
-                            Result.success(
-                                PartnerAd(
-                                    ad = banner,
-                                    details = emptyMap(),
-                                    request = request
-                                )
-                            )
-                        )
 
                         banner.setExpressInteractionListener(object :
                             TTNativeExpressAd.ExpressAdInteractionListener {
@@ -405,9 +396,6 @@ class PangleAdapter : PartnerAdapter {
                             ) {
                                 banner.destroy()
                                 PartnerLogController.log(SHOW_FAILED)
-                                continuation.resumeWith(
-                                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN))
-                                )
                             }
 
                             override fun onRenderSuccess(
@@ -416,18 +404,18 @@ class PangleAdapter : PartnerAdapter {
                                 height: Float
                             ) {
                                 PartnerLogController.log(SHOW_SUCCEEDED)
-                                continuation.resume(
-                                    Result.success(
-                                        PartnerAd(
-                                            ad = bannerView,
-                                            details = emptyMap(),
-                                            request = request
-                                        )
-                                    )
-                                )
                             }
                         })
                         banner.render()
+                        continuation.resume(
+                            Result.success(
+                                PartnerAd(
+                                    ad = banner,
+                                    details = emptyMap(),
+                                    request = request
+                                )
+                            )
+                        )
                     } ?: run {
                         PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                         continuation.resume(
