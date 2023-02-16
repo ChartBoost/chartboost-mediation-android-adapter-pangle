@@ -17,6 +17,7 @@ import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -81,6 +82,11 @@ class PangleAdapter : PartnerAdapter {
      * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
+
+    /**
+     * A set of banners so we can keep track of which ads to destroy.
+     */
+    private val loadedBanners = mutableSetOf<WeakReference<TTNativeExpressAd>>()
 
     /**
      * Initialize the Pangle SDK so that it is ready to request ads.
@@ -403,19 +409,21 @@ class PangleAdapter : PartnerAdapter {
                                 width: Float,
                                 height: Float
                             ) {
+                                loadedBanners.add(WeakReference(banner))
                                 PartnerLogController.log(SHOW_SUCCEEDED)
+                                continuation.resume(
+                                    Result.success(
+                                        PartnerAd(
+                                            ad = bannerView,
+                                            details = emptyMap(),
+                                            request = request
+                                        )
+                                    )
+                                )
                             }
                         })
                         banner.render()
-                        continuation.resume(
-                            Result.success(
-                                PartnerAd(
-                                    ad = banner,
-                                    details = emptyMap(),
-                                    request = request
-                                )
-                            )
-                        )
+
                     } ?: run {
                         PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                         continuation.resume(
@@ -715,8 +723,20 @@ class PangleAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully destroyed, Result.failure(Exception) otherwise.
      */
     private fun destroyBannerAd(partnerAd: PartnerAd): Result<PartnerAd> {
-        return (partnerAd.ad as? TTNativeExpressAd)?.let { bannerAd ->
-            bannerAd.destroy()
+        return (partnerAd.ad as? View)?.let { bannerView ->
+            with(loadedBanners.iterator()) {
+                forEach {
+                    val bannerAd = it.get()
+                    if (bannerAd == null) {
+                        remove()
+                        return@forEach
+                    }
+                    if (bannerView == bannerAd.expressAdView) {
+                        bannerAd.destroy()
+                        remove()
+                    }
+                }
+            }
 
             PartnerLogController.log(INVALIDATE_SUCCEEDED)
             Result.success(partnerAd)
