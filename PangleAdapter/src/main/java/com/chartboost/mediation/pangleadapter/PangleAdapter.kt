@@ -272,6 +272,10 @@ class PangleAdapter : PartnerAdapter {
             AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
             AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
             AdFormat.REWARDED -> loadRewardedAd(context, request, partnerAdListener)
+            AdFormat.REWARDED_INTERSTITIAL -> {
+                PartnerLogController.log(LOAD_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+            }
         }
     }
 
@@ -309,6 +313,10 @@ class PangleAdapter : PartnerAdapter {
                     Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
+            AdFormat.REWARDED_INTERSTITIAL -> {
+                PartnerLogController.log(SHOW_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
+            }
         }
     }
 
@@ -328,6 +336,10 @@ class PangleAdapter : PartnerAdapter {
                 // Pangle does not have destroy methods for their fullscreen ads.
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
+            }
+            AdFormat.REWARDED_INTERSTITIAL -> {
+                PartnerLogController.log(LOAD_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
             }
         }
     }
