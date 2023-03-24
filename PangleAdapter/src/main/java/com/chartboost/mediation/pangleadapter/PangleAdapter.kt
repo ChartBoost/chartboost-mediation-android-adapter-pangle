@@ -79,7 +79,7 @@ class PangleAdapter : PartnerAdapter {
         get() = "Pangle"
 
     /**
-     * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
+     * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
@@ -272,6 +272,10 @@ class PangleAdapter : PartnerAdapter {
             AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
             AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
             AdFormat.REWARDED -> loadRewardedAd(context, request, partnerAdListener)
+            else -> {
+                PartnerLogController.log(LOAD_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+            }
         }
     }
 
@@ -286,7 +290,7 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
 
-        val listener = listeners.remove(partnerAd.request.chartboostPlacement)
+        val listener = listeners.remove(partnerAd.request.identifier)
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
@@ -309,6 +313,10 @@ class PangleAdapter : PartnerAdapter {
                     Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
+            else -> {
+                PartnerLogController.log(SHOW_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
+            }
         }
     }
 
@@ -326,6 +334,10 @@ class PangleAdapter : PartnerAdapter {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
                 // Pangle does not have destroy methods for their fullscreen ads.
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                Result.success(partnerAd)
+            }
+            else -> {
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             }
@@ -452,7 +464,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.chartboostPlacement] = partnerAdListener
+        listeners[request.identifier] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val interstitialAd = TTAdSdk.getAdManager().createAdNative(context)
@@ -520,7 +532,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.chartboostPlacement] = partnerAdListener
+        listeners[request.identifier] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val rewardedAd = TTAdSdk.getAdManager().createAdNative(context)
