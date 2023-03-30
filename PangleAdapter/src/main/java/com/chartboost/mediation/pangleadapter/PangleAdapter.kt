@@ -79,7 +79,7 @@ class PangleAdapter : PartnerAdapter {
         get() = "Pangle"
 
     /**
-     * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
+     * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
@@ -290,7 +290,7 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
 
-        val listener = listeners.remove(partnerAd.request.chartboostPlacement)
+        val listener = listeners.remove(partnerAd.request.identifier)
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
@@ -338,8 +338,8 @@ class PangleAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             }
             else -> {
-                PartnerLogController.log(INVALIDATE_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_UNSUPPORTED_AD_FORMAT))
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                Result.success(partnerAd)
             }
         }
     }
@@ -464,7 +464,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.chartboostPlacement] = partnerAdListener
+        listeners[request.identifier] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val interstitialAd = TTAdSdk.getAdManager().createAdNative(context)
@@ -532,7 +532,7 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later usage.
-        listeners[request.chartboostPlacement] = partnerAdListener
+        listeners[request.identifier] = partnerAdListener
 
         return suspendCoroutine { continuation ->
             val rewardedAd = TTAdSdk.getAdManager().createAdNative(context)
