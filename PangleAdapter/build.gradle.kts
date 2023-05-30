@@ -39,6 +39,8 @@ android {
         android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "4.4.9.1.3.2"
         buildConfigField("String", "CHARTBOOST_MEDIATION_PANGLE_ADAPTER_VERSION", "\"${android.defaultConfig.versionName}\"")
 
+        consumerProguardFiles("proguard-rules.pro")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
