@@ -269,7 +269,7 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(LOAD_STARTED)
 
         return when (request.format) {
-            AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> loadBannerAd(context, request, partnerAdListener)
             AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
             AdFormat.REWARDED -> loadRewardedAd(context, request, partnerAdListener)
             else -> {
@@ -292,7 +292,7 @@ class PangleAdapter : PartnerAdapter {
 
         val listener = listeners.remove(partnerAd.request.identifier)
         return when (partnerAd.request.format) {
-            AdFormat.BANNER -> {
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
@@ -331,7 +331,7 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(INVALIDATE_STARTED)
 
         return when (partnerAd.request.format) {
-            AdFormat.BANNER -> destroyBannerAd(partnerAd)
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
                 // Pangle does not have destroy methods for their fullscreen ads.
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
