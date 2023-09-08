@@ -36,7 +36,7 @@ android {
         minSdk = 21
         targetSdk = 33
         // If you touch the following line, don't forget to update scripts/get_rc_version.zsh
-        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "4.4.9.1.3.2"
+        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "4.4.9.1.3.3"
         buildConfigField("String", "CHARTBOOST_MEDIATION_PANGLE_ADAPTER_VERSION", "\"${android.defaultConfig.versionName}\"")
 
         consumerProguardFiles("proguard-rules.pro")

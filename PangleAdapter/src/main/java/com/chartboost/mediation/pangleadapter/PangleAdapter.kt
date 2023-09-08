@@ -268,10 +268,10 @@ class PangleAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format) {
-            AdFormat.BANNER -> loadBannerAd(context, request, partnerAdListener)
-            AdFormat.INTERSTITIAL -> loadInterstitialAd(context, request, partnerAdListener)
-            AdFormat.REWARDED -> loadRewardedAd(context, request, partnerAdListener)
+        return when (request.format.key) {
+            AdFormat.BANNER.key, "adaptive_banner" -> loadBannerAd(context, request, partnerAdListener)
+            AdFormat.INTERSTITIAL.key -> loadInterstitialAd(context, request, partnerAdListener)
+            AdFormat.REWARDED.key -> loadRewardedAd(context, request, partnerAdListener)
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
                 Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
@@ -291,13 +291,13 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
 
         val listener = listeners.remove(partnerAd.request.identifier)
-        return when (partnerAd.request.format) {
-            AdFormat.BANNER -> {
+        return when (partnerAd.request.format.key) {
+            AdFormat.BANNER.key, "adaptive_banner" -> {
                 // Banner ads do not have a separate "show" mechanism.
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
-            AdFormat.INTERSTITIAL -> {
+            AdFormat.INTERSTITIAL.key -> {
                 (context as? Activity)?.let { activity ->
                     showInterstitialAd(activity, partnerAd, listener)
                 } ?: run {
@@ -305,7 +305,7 @@ class PangleAdapter : PartnerAdapter {
                     Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
                 }
             }
-            AdFormat.REWARDED -> {
+            AdFormat.REWARDED.key -> {
                 (context as? Activity)?.let { activity ->
                     showRewardedAd(activity, partnerAd, listener)
                 } ?: run {
@@ -330,9 +330,9 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
 
-        return when (partnerAd.request.format) {
-            AdFormat.BANNER -> destroyBannerAd(partnerAd)
-            AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
+        return when (partnerAd.request.format.key) {
+            AdFormat.BANNER.key, "adaptive_banner" -> destroyBannerAd(partnerAd)
+            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
                 // Pangle does not have destroy methods for their fullscreen ads.
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
