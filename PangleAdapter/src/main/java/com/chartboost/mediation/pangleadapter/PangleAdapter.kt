@@ -10,8 +10,6 @@ package com.chartboost.mediation.pangleadapter
 import android.app.Activity
 import android.content.Context
 import android.util.Size
-import android.view.View
-import com.bytedance.sdk.openadsdk.api.PAGClientBidding
 import com.bytedance.sdk.openadsdk.api.PAGConstant
 import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAd
 import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAdInteractionListener
@@ -50,7 +48,6 @@ import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_TRACK_IMPRESSION
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_APPLICABLE
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_DENIED
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_GRANTED
@@ -74,7 +71,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * The Chartboost Mediation Pangle SDK adapter.
@@ -85,7 +81,7 @@ class PangleAdapter : PartnerAdapter {
          * Flag that can optionally be set to enable Pangle's multi-process support. It must be set
          * prior to initializing the Pangle SDK for it to take effect.
          */
-        public var multiProcessSupport = false
+        var multiProcessSupport = false
             set(value) {
                 field = value
                 PartnerLogController.log(
@@ -101,9 +97,9 @@ class PangleAdapter : PartnerAdapter {
     }
 
     /**
-     * A lambda to call for successful Pangle ad shows.
+     * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
-    private var onShowSuccess: () -> Unit = {}
+    private val listeners = mutableMapOf<String, PartnerAdListener>()
 
     /**
      * Get the Pangle SDK version.
@@ -354,16 +350,18 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
 
+        val listener = listeners.remove(partnerAd.request.identifier)
+
         return when (partnerAd.request.format.key) {
             AdFormat.BANNER.key, "adaptive_banner" -> {
                 // Banner ads do not have a separate "show" mechanism.
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
+
             AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
                 (context as? Activity)?.let { activity ->
-                    showFullscreenAd(activity, partnerAd)
-                    Result.success(partnerAd)
+                    showFullscreenAd(activity, partnerAd, listener)
                 } ?: run {
                     PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
                     Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
@@ -385,6 +383,7 @@ class PangleAdapter : PartnerAdapter {
      */
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
+        listeners.remove(partnerAd.request.identifier)
 
         return when (partnerAd.request.format.key) {
             AdFormat.BANNER.key, "adaptive_banner" -> destroyBannerAd(partnerAd)
@@ -393,6 +392,7 @@ class PangleAdapter : PartnerAdapter {
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             }
+
             else -> {
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
@@ -412,50 +412,51 @@ class PangleAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
+            fun resumeOnce(result: Result<PartnerAd>) {
+                if (continuation.isActive) {
+                    continuation.resume(result)
+                }
+            }
+
             PAGBannerAd.loadAd(
                 request.partnerPlacement,
                 PAGBannerRequest(getPangleBannerSize(request.size)),
                 object : PAGBannerAdLoadListener {
                     override fun onError(code: Int, message: String?) {
                         PartnerLogController.log(LOAD_FAILED, "Code: $code. Error: $message")
-                        continuation.resume(
+                        resumeOnce(
                             Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN))
                         )
                     }
 
                     override fun onAdLoaded(pagBannerAd: PAGBannerAd?) {
                         PartnerLogController.log(LOAD_SUCCEEDED)
-                        pagBannerAd?.let {
-                            it.setAdInteractionListener(object : PAGBannerAdInteractionListener {
+                        pagBannerAd?.let { banner ->
+                            banner.setAdInteractionListener(object : PAGBannerAdInteractionListener {
                                 override fun onAdShowed() {
-                                    PartnerLogController.log(DID_TRACK_IMPRESSION)
-                                    partnerAdListener.onPartnerAdImpression(
-                                        PartnerAd(
-                                            ad = it,
-                                            details = emptyMap(),
-                                            request = request,
-                                        )
-                                    )
+                                    // NO-OP
                                 }
 
                                 override fun onAdClicked() {
                                     partnerAdListener.onPartnerAdClicked(
                                         PartnerAd(
-                                            ad = it,
+                                            ad = banner,
                                             details = emptyMap(),
                                             request = request
                                         )
                                     )
                                 }
 
-                                override fun onAdDismissed() {}
+                                override fun onAdDismissed() {
+                                    // NO-OP
+                                }
                             })
 
-                            continuation.resume(
+                            resumeOnce(
                                 Result.success(
                                     PartnerAd(
-                                        ad = it.bannerView,
+                                        ad = banner.bannerView,
                                         details = emptyMap(),
                                         request = request
                                     )
@@ -463,14 +464,15 @@ class PangleAdapter : PartnerAdapter {
                             )
                         } ?: run {
                             PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
-                            continuation.resume(
+                            resumeOnce(
                                 Result.failure(
                                     ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND)
                                 )
                             )
                         }
+                    }
                 }
-            })
+            )
         }
     }
 
@@ -486,6 +488,9 @@ class PangleAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
+        // Save the listener for later use.
+        listeners[request.identifier] = partnerAdListener
+
         return suspendCancellableCoroutine { continuation ->
             fun resumeOnce(result: Result<PartnerAd>) {
                 if (continuation.isActive) {
@@ -511,29 +516,16 @@ class PangleAdapter : PartnerAdapter {
 
                     override fun onAdLoaded(pagInterstitialAd: PAGInterstitialAd?) {
                         pagInterstitialAd?.let {
-                            val partnerAd = PartnerAd(
-                                ad = it,
-                                details = emptyMap(),
-                                request = request,
-                            )
-                            it.setAdInteractionListener(object :
-                                PAGInterstitialAdInteractionListener {
-                                override fun onAdShowed() {
-                                    onShowSuccess()
-                                }
-
-                                override fun onAdClicked() {
-                                    PartnerLogController.log(DID_CLICK)
-                                    partnerAdListener.onPartnerAdClicked(partnerAd)
-                                }
-
-                                override fun onAdDismissed() {
-                                    PartnerLogController.log(DID_DISMISS)
-                                    partnerAdListener.onPartnerAdDismissed(partnerAd, null)
-                                }
-                            })
                             PartnerLogController.log(LOAD_SUCCEEDED)
-                            resumeOnce(Result.success(partnerAd))
+                            resumeOnce(
+                                Result.success(
+                                    PartnerAd(
+                                        ad = it,
+                                        details = emptyMap(),
+                                        request = request,
+                                    )
+                                )
+                            )
                         } ?: run {
                             PartnerLogController.log(LOAD_FAILED)
                             resumeOnce(
@@ -558,6 +550,9 @@ class PangleAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
+        // Save the listener for later use.
+        listeners[request.identifier] = partnerAdListener
+
         return suspendCancellableCoroutine { continuation ->
             fun resumeOnce(result: Result<PartnerAd>) {
                 if (continuation.isActive) {
@@ -583,35 +578,16 @@ class PangleAdapter : PartnerAdapter {
 
                     override fun onAdLoaded(pagRewardedAd: PAGRewardedAd?) {
                         pagRewardedAd?.let {
-                            val partnerAd = PartnerAd(
-                                ad = it,
-                                details = emptyMap(),
-                                request = request,
-                            )
-                            it.setAdInteractionListener(object : PAGRewardedAdInteractionListener {
-                                override fun onAdShowed() {
-                                    onShowSuccess()
-                                }
-
-                                override fun onAdClicked() {
-                                    PartnerLogController.log(DID_CLICK)
-                                    partnerAdListener.onPartnerAdClicked(partnerAd)
-                                }
-
-                                override fun onAdDismissed() {
-                                    PartnerLogController.log(DID_DISMISS)
-                                    partnerAdListener.onPartnerAdDismissed(partnerAd, null)
-                                }
-
-                                override fun onUserEarnedReward(rewardItem: PAGRewardItem) {
-                                    PartnerLogController.log(DID_REWARD)
-                                    partnerAdListener.onPartnerAdRewarded(partnerAd)
-                                }
-
-                                override fun onUserEarnedRewardFail(code: Int, message: String?) {}
-                            })
                             PartnerLogController.log(LOAD_SUCCEEDED)
-                            resumeOnce(Result.success(partnerAd))
+                            resumeOnce(
+                                Result.success(
+                                    PartnerAd(
+                                        ad = it,
+                                        details = emptyMap(),
+                                        request = request,
+                                    )
+                                )
+                            )
                         } ?: run {
                             PartnerLogController.log(LOAD_FAILED)
                             resumeOnce(
@@ -631,12 +607,14 @@ class PangleAdapter : PartnerAdapter {
      *
      * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Pangle ad to be shown.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     private suspend fun showFullscreenAd(
         activity: Activity,
         partnerAd: PartnerAd,
+        partnerAdListener: PartnerAdListener?,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             fun resumeOnce(result: Result<PartnerAd>) {
@@ -645,16 +623,86 @@ class PangleAdapter : PartnerAdapter {
                 }
             }
 
-            onShowSuccess = {
-                PartnerLogController.log(SHOW_SUCCEEDED)
-                resumeOnce(Result.success(partnerAd))
-            }
-
             when (val ad = partnerAd.ad) {
                 is PAGInterstitialAd -> {
+                    ad.setAdInteractionListener(object :
+                        PAGInterstitialAdInteractionListener {
+                        override fun onAdShowed() {
+                            PartnerLogController.log(SHOW_SUCCEEDED)
+                            resumeOnce(Result.success(partnerAd))
+                        }
+
+                        override fun onAdClicked() {
+                            PartnerLogController.log(DID_CLICK)
+                            partnerAdListener?.onPartnerAdClicked(partnerAd) ?: run {
+                                PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                            }
+                        }
+
+                        override fun onAdDismissed() {
+                            PartnerLogController.log(DID_DISMISS)
+                            partnerAdListener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                                PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                            }
+                        }
+                    })
                     ad.show(activity)
                 }
                 is PAGRewardedAd -> {
+                    ad.setAdInteractionListener(object : PAGRewardedAdInteractionListener {
+                        override fun onAdShowed() {
+                            PartnerLogController.log(SHOW_SUCCEEDED)
+                            resumeOnce(Result.success(partnerAd))
+                        }
+
+                        override fun onAdClicked() {
+                            PartnerLogController.log(DID_CLICK)
+                            partnerAdListener?.onPartnerAdClicked(partnerAd) ?: run {
+                                PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                            }
+                        }
+
+                        override fun onAdDismissed() {
+                            PartnerLogController.log(DID_DISMISS)
+                            partnerAdListener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                                PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                            }
+                        }
+
+                        override fun onUserEarnedReward(rewardItem: PAGRewardItem) {
+                            PartnerLogController.log(DID_REWARD)
+                            partnerAdListener?.onPartnerAdRewarded(partnerAd) ?: run {
+                                PartnerLogController.log(
+                                    CUSTOM,
+                                    "Unable to fire onPartnerAdRewarded for Pangle adapter. " +
+                                            "Listener is null."
+                                )
+                            }
+                        }
+
+                        override fun onUserEarnedRewardFail(code: Int, message: String?) {
+                            PartnerLogController.log(
+                                CUSTOM,
+                                "Pangle reward failed with code: $code and message: $message"
+                            )
+                        }
+                    })
                     ad.show(activity)
                 }
                 else -> {
