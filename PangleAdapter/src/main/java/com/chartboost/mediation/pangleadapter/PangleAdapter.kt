@@ -11,61 +11,13 @@ import android.app.Activity
 import android.content.Context
 import android.util.Size
 import com.bytedance.sdk.openadsdk.api.PAGConstant
-import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAd
-import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAdInteractionListener
-import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAdLoadListener
-import com.bytedance.sdk.openadsdk.api.banner.PAGBannerRequest
-import com.bytedance.sdk.openadsdk.api.banner.PAGBannerSize
-import com.bytedance.sdk.openadsdk.api.init.PAGConfig
-import com.bytedance.sdk.openadsdk.api.init.PAGSdk
-import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAd
-import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdInteractionListener
-import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdLoadListener
-import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialRequest
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardItem
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAd
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdInteractionListener
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdLoadListener
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedRequest
-import com.chartboost.heliumsdk.domain.AdFormat
-import com.chartboost.heliumsdk.domain.ChartboostMediationAdException
-import com.chartboost.heliumsdk.domain.ChartboostMediationError
-import com.chartboost.heliumsdk.domain.GdprConsentStatus
-import com.chartboost.heliumsdk.domain.PartnerAd
-import com.chartboost.heliumsdk.domain.PartnerAdListener
-import com.chartboost.heliumsdk.domain.PartnerAdLoadRequest
-import com.chartboost.heliumsdk.domain.PartnerAdapter
-import com.chartboost.heliumsdk.domain.PartnerConfiguration
-import com.chartboost.heliumsdk.domain.PreBidRequest
+import com.bytedance.sdk.openadsdk.api.banner.*
+import com.bytedance.sdk.openadsdk.api.init.*
+import com.bytedance.sdk.openadsdk.api.interstitial.*
+import com.bytedance.sdk.openadsdk.api.reward.*
+import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_SUCCEEDED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.CCPA_CONSENT_DENIED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.CCPA_CONSENT_GRANTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.COPPA_NOT_SUBJECT
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.COPPA_SUBJECT
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.CUSTOM
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_APPLICABLE
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_DENIED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_GRANTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_UNKNOWN
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_NOT_APPLICABLE
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_UNKNOWN
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_FAILED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_STARTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_SUCCEEDED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_FAILED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_STARTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_SUCCEEDED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_FAILED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_STARTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_SUCCEEDED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_FAILED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_STARTED
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_SUCCEEDED
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -349,7 +301,6 @@ class PangleAdapter : PartnerAdapter {
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
-
         val listener = listeners.remove(partnerAd.request.identifier)
 
         return when (partnerAd.request.format.key) {
