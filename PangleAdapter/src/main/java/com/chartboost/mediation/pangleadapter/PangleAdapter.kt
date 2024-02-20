@@ -18,10 +18,12 @@ import com.bytedance.sdk.openadsdk.api.reward.*
 import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 
 /**
@@ -461,53 +463,13 @@ class PangleAdapter : PartnerAdapter {
         listeners[request.identifier] = partnerAdListener
 
         return suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<PartnerAd>) {
-                if (continuation.isActive) {
-                    continuation.resume(result)
-                }
-            }
-
             PAGInterstitialAd.loadAd(
                 request.partnerPlacement,
                 PAGInterstitialRequest(),
-                object : PAGInterstitialAdLoadListener {
-                    override fun onError(
-                        code: Int,
-                        message: String,
-                    ) {
-                        PartnerLogController.log(
-                            LOAD_FAILED,
-                            "Code: $code. Error: $message",
-                        )
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
-                            ),
-                        )
-                    }
-
-                    override fun onAdLoaded(pagInterstitialAd: PAGInterstitialAd?) {
-                        pagInterstitialAd?.let {
-                            PartnerLogController.log(LOAD_SUCCEEDED)
-                            resumeOnce(
-                                Result.success(
-                                    PartnerAd(
-                                        ad = it,
-                                        details = emptyMap(),
-                                        request = request,
-                                    ),
-                                ),
-                            )
-                        } ?: run {
-                            PartnerLogController.log(LOAD_FAILED)
-                            resumeOnce(
-                                Result.failure(
-                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
-                                ),
-                            )
-                        }
-                    }
-                },
+                InterstitialAdLoadListener(
+                    WeakReference(continuation),
+                    request = request,
+                ),
             )
         }
     }
@@ -528,53 +490,13 @@ class PangleAdapter : PartnerAdapter {
         listeners[request.identifier] = partnerAdListener
 
         return suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<PartnerAd>) {
-                if (continuation.isActive) {
-                    continuation.resume(result)
-                }
-            }
-
             PAGRewardedAd.loadAd(
                 request.partnerPlacement,
                 PAGRewardedRequest(),
-                object : PAGRewardedAdLoadListener {
-                    override fun onError(
-                        code: Int,
-                        message: String,
-                    ) {
-                        PartnerLogController.log(
-                            LOAD_FAILED,
-                            "Code: $code. Error: $message",
-                        )
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
-                            ),
-                        )
-                    }
-
-                    override fun onAdLoaded(pagRewardedAd: PAGRewardedAd?) {
-                        pagRewardedAd?.let {
-                            PartnerLogController.log(LOAD_SUCCEEDED)
-                            resumeOnce(
-                                Result.success(
-                                    PartnerAd(
-                                        ad = it,
-                                        details = emptyMap(),
-                                        request = request,
-                                    ),
-                                ),
-                            )
-                        } ?: run {
-                            PartnerLogController.log(LOAD_FAILED)
-                            resumeOnce(
-                                Result.failure(
-                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
-                                ),
-                            )
-                        }
-                    }
-                },
+                RewardedAdLoadListener(
+                    WeakReference(continuation),
+                    request = request,
+                ),
             )
         }
     }
@@ -594,98 +516,35 @@ class PangleAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener?,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
+            val weakContinuationRef = WeakReference(continuation)
             fun resumeOnce(result: Result<PartnerAd>) {
-                if (continuation.isActive) {
-                    continuation.resume(result)
+                weakContinuationRef.get()?.let {
+                    if (it.isActive) {
+                        it.resume(result)
+                    }
+                } ?: run {
+                    PartnerLogController.log(SHOW_FAILED, "Unable to resume continuation once. Continuation is null.")
                 }
             }
 
             when (val ad = partnerAd.ad) {
                 is PAGInterstitialAd -> {
                     ad.setAdInteractionListener(
-                        object :
-                            PAGInterstitialAdInteractionListener {
-                            override fun onAdShowed() {
-                                PartnerLogController.log(SHOW_SUCCEEDED)
-                                resumeOnce(Result.success(partnerAd))
-                            }
-
-                            override fun onAdClicked() {
-                                PartnerLogController.log(DID_CLICK)
-                                partnerAdListener?.onPartnerAdClicked(partnerAd) ?: run {
-                                    PartnerLogController.log(
-                                        CUSTOM,
-                                        "Unable to fire onPartnerAdClicked for Pangle adapter. " +
-                                            "Listener is null.",
-                                    )
-                                }
-                            }
-
-                            override fun onAdDismissed() {
-                                PartnerLogController.log(DID_DISMISS)
-                                partnerAdListener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                                    PartnerLogController.log(
-                                        CUSTOM,
-                                        "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                            "Listener is null.",
-                                    )
-                                }
-                            }
-                        },
+                        InterstitialAdShowListener(
+                            WeakReference(continuation),
+                            listener = partnerAdListener,
+                            partnerAd = partnerAd
+                        )
                     )
                     ad.show(activity)
                 }
                 is PAGRewardedAd -> {
                     ad.setAdInteractionListener(
-                        object : PAGRewardedAdInteractionListener {
-                            override fun onAdShowed() {
-                                PartnerLogController.log(SHOW_SUCCEEDED)
-                                resumeOnce(Result.success(partnerAd))
-                            }
-
-                            override fun onAdClicked() {
-                                PartnerLogController.log(DID_CLICK)
-                                partnerAdListener?.onPartnerAdClicked(partnerAd) ?: run {
-                                    PartnerLogController.log(
-                                        CUSTOM,
-                                        "Unable to fire onPartnerAdClicked for Pangle adapter. " +
-                                            "Listener is null.",
-                                    )
-                                }
-                            }
-
-                            override fun onAdDismissed() {
-                                PartnerLogController.log(DID_DISMISS)
-                                partnerAdListener?.onPartnerAdDismissed(partnerAd, null) ?: run {
-                                    PartnerLogController.log(
-                                        CUSTOM,
-                                        "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
-                                            "Listener is null.",
-                                    )
-                                }
-                            }
-
-                            override fun onUserEarnedReward(rewardItem: PAGRewardItem) {
-                                PartnerLogController.log(DID_REWARD)
-                                partnerAdListener?.onPartnerAdRewarded(partnerAd) ?: run {
-                                    PartnerLogController.log(
-                                        CUSTOM,
-                                        "Unable to fire onPartnerAdRewarded for Pangle adapter. " +
-                                            "Listener is null.",
-                                    )
-                                }
-                            }
-
-                            override fun onUserEarnedRewardFail(
-                                code: Int,
-                                message: String?,
-                            ) {
-                                PartnerLogController.log(
-                                    CUSTOM,
-                                    "Pangle reward failed with code: $code and message: $message",
-                                )
-                            }
-                        },
+                        RewardedAdShowListener(
+                            WeakReference(continuation),
+                            listener = partnerAdListener,
+                            partnerAd = partnerAd
+                        ),
                     )
                     ad.show(activity)
                 }
@@ -738,6 +597,255 @@ class PangleAdapter : PartnerAdapter {
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+        }
+    }
+
+    /**
+     * Callback for loading interstitial ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
+     */
+    private class InterstitialAdLoadListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+    ): PAGInterstitialAdLoadListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    LOAD_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
+        }
+
+        override fun onError(
+            code: Int,
+            message: String,
+        ) {
+            PartnerLogController.log(
+                LOAD_FAILED,
+                "Code: $code. Error: $message",
+            )
+            resumeOnce(
+                Result.failure(
+                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
+                ),
+            )
+        }
+
+        override fun onAdLoaded(pagInterstitialAd: PAGInterstitialAd?) {
+            pagInterstitialAd?.let {
+                PartnerLogController.log(LOAD_SUCCEEDED)
+                resumeOnce(
+                    Result.success(
+                        PartnerAd(
+                            ad = it,
+                            details = emptyMap(),
+                            request = request,
+                        ),
+                    ),
+                )
+            } ?: run {
+                PartnerLogController.log(LOAD_FAILED)
+                resumeOnce(
+                    Result.failure(
+                        ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * Callback for loading rewarded ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
+     */
+    private class RewardedAdLoadListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+    ): PAGRewardedAdLoadListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    LOAD_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
+        }
+
+        override fun onError(
+            code: Int,
+            message: String,
+        ) {
+            PartnerLogController.log(
+                LOAD_FAILED,
+                "Code: $code. Error: $message",
+            )
+            resumeOnce(
+                Result.failure(
+                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
+                ),
+            )
+        }
+
+        override fun onAdLoaded(pagRewardedAd: PAGRewardedAd?) {
+            pagRewardedAd?.let {
+                PartnerLogController.log(LOAD_SUCCEEDED)
+                resumeOnce(
+                    Result.success(
+                        PartnerAd(
+                            ad = it,
+                            details = emptyMap(),
+                            request = request,
+                        ),
+                    ),
+                )
+            } ?: run {
+                PartnerLogController.log(LOAD_FAILED)
+                resumeOnce(
+                    Result.failure(
+                        ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * Callback for showing interstitial ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param listener A [PartnerAdListener] to be notified of ad events.
+     * @param partnerAd A [PartnerAd] object containing the ad to show.
+     */
+    private class InterstitialAdShowListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val listener: PartnerAdListener?,
+        private val partnerAd: PartnerAd,
+    ): PAGInterstitialAdInteractionListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    SHOW_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
+        }
+
+        override fun onAdShowed() {
+            PartnerLogController.log(SHOW_SUCCEEDED)
+            resumeOnce(Result.success(partnerAd))
+        }
+
+        override fun onAdClicked() {
+            PartnerLogController.log(DID_CLICK)
+            listener?.onPartnerAdClicked(partnerAd) ?: run {
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                            "Listener is null.",
+                )
+            }
+        }
+
+        override fun onAdDismissed() {
+            PartnerLogController.log(DID_DISMISS)
+            listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                            "Listener is null.",
+                )
+            }
+        }
+    }
+
+    /**
+     * Callback for showing rewarded ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param listener A [PartnerAdListener] to be notified of ad events.
+     * @param partnerAd A [PartnerAd] object containing the ad to show.
+     */
+    private class RewardedAdShowListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val listener: PartnerAdListener?,
+        private val partnerAd: PartnerAd,
+    ): PAGRewardedAdInteractionListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    SHOW_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
+        }
+
+        override fun onAdShowed() {
+            PartnerLogController.log(SHOW_SUCCEEDED)
+            resumeOnce(Result.success(partnerAd))
+        }
+
+        override fun onAdClicked() {
+            PartnerLogController.log(DID_CLICK)
+            listener?.onPartnerAdClicked(partnerAd) ?: run {
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Unable to fire onPartnerAdClicked for Pangle adapter. " +
+                            "Listener is null.",
+                )
+            }
+        }
+
+        override fun onAdDismissed() {
+            PartnerLogController.log(DID_DISMISS)
+            listener?.onPartnerAdDismissed(partnerAd, null) ?: run {
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Unable to fire onPartnerAdDismissed for Pangle adapter. " +
+                            "Listener is null.",
+                )
+            }
+        }
+
+        override fun onUserEarnedReward(rewardItem: PAGRewardItem) {
+            PartnerLogController.log(DID_REWARD)
+            listener?.onPartnerAdRewarded(partnerAd) ?: run {
+                PartnerLogController.log(
+                    CUSTOM,
+                    "Unable to fire onPartnerAdRewarded for Pangle adapter. " +
+                            "Listener is null.",
+                )
+            }
+        }
+
+        override fun onUserEarnedRewardFail(
+            code: Int,
+            message: String?,
+        ) {
+            PartnerLogController.log(
+                CUSTOM,
+                "Pangle reward failed with code: $code and message: $message",
+            )
         }
     }
 }
