@@ -89,7 +89,7 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Initialize the Pangle SDK so that it is ready to request ads.
      *
-     * @param context The current [Context].
+     * @param context The current [Activity].
      * @param partnerConfiguration Configuration object containing relevant data to initialize Pangle.
      *
      * @return Result.success(Unit) if Pangle successfully initialized, Result.failure(Exception) otherwise.
@@ -304,13 +304,13 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Attempt to show the currently loaded Pangle ad.
      *
-     * @param context The current [Context]
+     * @param activity The current [Activity]
      * @param partnerAd The [PartnerAd] object containing the Pangle ad to be shown.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(
-        context: Context,
+        activity: Activity,
         partnerAd: PartnerAd,
     ): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
@@ -324,12 +324,7 @@ class PangleAdapter : PartnerAdapter {
             }
 
             AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
-                (context as? Activity)?.let { activity ->
-                    showFullscreenAd(activity, partnerAd, listener)
-                } ?: run {
-                    PartnerLogController.log(SHOW_FAILED, "Activity context is required.")
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_ACTIVITY_NOT_FOUND))
-                }
+                showFullscreenAd(activity, partnerAd, listener)
             }
             else -> {
                 PartnerLogController.log(SHOW_FAILED)
