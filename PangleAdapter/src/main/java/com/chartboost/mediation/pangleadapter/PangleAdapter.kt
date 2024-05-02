@@ -18,6 +18,7 @@ import com.bytedance.sdk.openadsdk.api.reward.*
 import com.chartboost.chartboostmediationsdk.domain.*
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.mediation.pangleadapter.PangleAdapterConfiguration.adapterVersion
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -30,61 +31,20 @@ import kotlin.coroutines.resume
 class PangleAdapter : PartnerAdapter {
     companion object {
         /**
-         * Flag that can optionally be set to enable Pangle's multi-process support. It must be set
-         * prior to initializing the Pangle SDK for it to take effect.
-         */
-        var multiProcessSupport = false
-            set(value) {
-                field = value
-                PartnerLogController.log(
-                    CUSTOM,
-                    "Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.",
-                )
-            }
-
-        /**
          * Key for parsing the Pangle SDK application ID.
          */
         private const val APPLICATION_ID_KEY = "application_id"
     }
 
     /**
+     * The Pangle adapter configuration.
+     */
+    override var configuration: PartnerAdapterConfiguration = PangleAdapterConfiguration
+
+    /**
      * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
-
-    /**
-     * Get the Pangle SDK version.
-     */
-    override val partnerSdkVersion: String
-        get() = PAGSdk.getSDKVersion()
-
-    /**
-     * Get the Pangle adapter version.
-     *
-     * You may version the adapter using any preferred convention, but it is recommended to apply the
-     * following format if the adapter will be published by Chartboost Mediation:
-     *
-     * Chartboost Mediation.Partner.Adapter
-     *
-     * "Chartboost Mediation" represents the Chartboost Mediation SDK’s major version that is compatible with this adapter. This must be 1 digit.
-     * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
-     * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
-     */
-    override val adapterVersion: String
-        get() = BuildConfig.CHARTBOOST_MEDIATION_PANGLE_ADAPTER_VERSION
-
-    /**
-     * Get the partner name for internal uses.
-     */
-    override val partnerId: String
-        get() = "pangle"
-
-    /**
-     * Get the partner name for external uses.
-     */
-    override val partnerDisplayName: String
-        get() = "Pangle"
 
     /**
      * Initialize the Pangle SDK so that it is ready to request ads.
@@ -161,7 +121,7 @@ class PangleAdapter : PartnerAdapter {
     private fun buildConfig(appId: String) =
         PAGConfig.Builder()
             .appId(appId)
-            .supportMultiProcess(multiProcessSupport)
+            .supportMultiProcess(PangleAdapterConfiguration.multiProcessSupport)
             .setUserData("[{\"name\":\"mediation\",\"value\":\"Chartboost\"},{\"name\":\"adapter_version\",\"value\":\"$adapterVersion\"}]")
             .build()
 
