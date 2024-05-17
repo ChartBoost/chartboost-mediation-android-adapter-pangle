@@ -42,8 +42,8 @@ object PangleAdapterConfiguration : PartnerAdapterConfiguration {
         set(value) {
             field = value
             PartnerLogController.log(
-                    PartnerLogController.PartnerAdapterEvents.CUSTOM,
-                    "Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.",
+                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                "Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.",
             )
         }
 }

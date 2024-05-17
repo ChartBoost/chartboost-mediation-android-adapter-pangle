@@ -95,7 +95,7 @@ class PangleAdapter : PartnerAdapter {
                                 resumeOnce(
                                     Result.failure(
                                         ChartboostMediationAdException(
-                                            ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN,
+                                            ChartboostMediationError.InitializationError.Unknown,
                                         ),
                                     ),
                                 )
@@ -105,7 +105,7 @@ class PangleAdapter : PartnerAdapter {
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing application ID.")
                 resumeOnce(
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)),
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.InvalidCredentials)),
                 )
             }
         }
@@ -221,7 +221,7 @@ class PangleAdapter : PartnerAdapter {
      */
     fun setCcpaConsent(
         context: Context,
-        hasGrantedCcpaConsent: Boolean
+        hasGrantedCcpaConsent: Boolean,
     ) {
         setCcpaConsent(context, hasGrantedCcpaConsent, "")
     }
@@ -290,7 +290,7 @@ class PangleAdapter : PartnerAdapter {
             AdFormat.REWARDED.key -> loadRewardedAd(request, partnerAdListener)
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
             }
         }
     }
@@ -322,7 +322,7 @@ class PangleAdapter : PartnerAdapter {
             }
             else -> {
                 PartnerLogController.log(SHOW_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.UnsupportedAdFormat))
             }
         }
     }
@@ -382,7 +382,7 @@ class PangleAdapter : PartnerAdapter {
                     ) {
                         PartnerLogController.log(LOAD_FAILED, "Code: $code. Error: $message")
                         resumeOnce(
-                            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN)),
+                            Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.Unknown)),
                         )
                     }
 
@@ -424,7 +424,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED, "No Pangle banner found.")
                             resumeOnce(
                                 Result.failure(
-                                    ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND),
+                                    ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotFound),
                                 ),
                             )
                         }
@@ -470,7 +470,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         resumeOnce(
                             Result.failure(
-                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
+                                ChartboostMediationAdException(ChartboostMediationError.LoadError.Unknown),
                             ),
                         )
                     }
@@ -491,7 +491,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             resumeOnce(
                                 Result.failure(
-                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
+                                    ChartboostMediationAdException(ChartboostMediationError.LoadError.MismatchedAdParams),
                                 ),
                             )
                         }
@@ -537,7 +537,7 @@ class PangleAdapter : PartnerAdapter {
                         )
                         resumeOnce(
                             Result.failure(
-                                ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNKNOWN),
+                                ChartboostMediationAdException(ChartboostMediationError.LoadError.Unknown),
                             ),
                         )
                     }
@@ -558,7 +558,7 @@ class PangleAdapter : PartnerAdapter {
                             PartnerLogController.log(LOAD_FAILED)
                             resumeOnce(
                                 Result.failure(
-                                    ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS),
+                                    ChartboostMediationAdException(ChartboostMediationError.LoadError.MismatchedAdParams),
                                 ),
                             )
                         }
@@ -685,7 +685,7 @@ class PangleAdapter : PartnerAdapter {
                     )
                     resumeOnce(
                         Result.failure(
-                            ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE),
+                            ChartboostMediationAdException(ChartboostMediationError.ShowError.WrongResourceType),
                         ),
                     )
                 }
@@ -726,7 +726,7 @@ class PangleAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 }
