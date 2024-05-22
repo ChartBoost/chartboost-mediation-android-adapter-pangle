@@ -6,6 +6,9 @@ Adapters are compatible with any Chartboost Mediation SDK version within that ma
 ### 4.5.9.0.6.0
 - This version of the adapter has been certified with Pangle SDK 5.9.0.6.
 
+### 4.5.9.0.5.0
+- This version of the adapter has been certified with Pangle SDK 5.9.0.5.
+
 ### 4.5.9.0.4.0
 - This version of the adapter has been certified with Pangle SDK 5.9.0.4.
 
