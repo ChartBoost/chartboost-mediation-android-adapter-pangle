@@ -12,12 +12,41 @@ import android.content.Context
 import android.util.Size
 import com.bytedance.sdk.openadsdk.api.PAGConstant
 import com.bytedance.sdk.openadsdk.api.banner.*
-import com.bytedance.sdk.openadsdk.api.init.*
-import com.bytedance.sdk.openadsdk.api.interstitial.*
+import com.bytedance.sdk.openadsdk.api.init.PAGConfig
+import com.bytedance.sdk.openadsdk.api.init.PAGSdk
+import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAd
+import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdInteractionListener
+import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdLoadListener
+import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialRequest
 import com.bytedance.sdk.openadsdk.api.reward.*
 import com.chartboost.chartboostmediationsdk.domain.*
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
-import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.CUSTOM
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_DENIED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_GRANTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_UNKNOWN
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_NOT_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_DENIED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_GRANTED
+import com.chartboost.core.consent.*
 import com.chartboost.mediation.pangleadapter.PangleAdapterConfiguration.adapterVersion
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
@@ -57,11 +86,11 @@ class PangleAdapter : PartnerAdapter {
     override suspend fun setUp(
         context: Context,
         partnerConfiguration: PartnerConfiguration,
-    ): Result<Unit> {
+    ): Result<Map<String, Any>> {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<Unit>) {
+            fun resumeOnce(result: Result<Map<String, Any>>) {
                 if (continuation.isActive) {
                     continuation.resume(result)
                 }
@@ -77,11 +106,8 @@ class PangleAdapter : PartnerAdapter {
                         buildConfig(appId),
                         object : PAGSdk.PAGInitCallback {
                             override fun success() {
-                                resumeOnce(
-                                    Result.success(
-                                        PartnerLogController.log(SETUP_SUCCEEDED),
-                                    ),
-                                )
+                                PartnerLogController.log(SETUP_SUCCEEDED)
+                                resumeOnce(Result.success(emptyMap()))
                             }
 
                             override fun fail(
@@ -126,125 +152,24 @@ class PangleAdapter : PartnerAdapter {
             .build()
 
     /**
-     * Notify the Pangle SDK of the GDPR applicability and consent status.
-     *
-     * @param context The current [Context].
-     * @param applies True if GDPR applies, false otherwise.
-     * @param gdprConsentStatus The user's GDPR consent status.
-     */
-    override fun setGdpr(
-        context: Context,
-        applies: Boolean?,
-        gdprConsentStatus: GdprConsentStatus,
-    ) {
-        PartnerLogController.log(
-            when (applies) {
-                true -> GDPR_APPLICABLE
-                false -> GDPR_NOT_APPLICABLE
-                else -> GDPR_UNKNOWN
-            },
-        )
-
-        PAGConfig.setGDPRConsent(
-            when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> {
-                    PartnerLogController.log(GDPR_CONSENT_GRANTED)
-                    PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_CONSENT
-                }
-
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> {
-                    PartnerLogController.log(GDPR_CONSENT_DENIED)
-                    PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_NO_CONSENT
-                }
-
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> {
-                    PartnerLogController.log(GDPR_CONSENT_UNKNOWN)
-                    PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_DEFAULT
-                }
-            },
-        )
-    }
-
-    /**
-     * Set Pangle user's consent value using a boolean.
-     * This is for publishers to manually set the consent status.
-     * This uses CONSENT_GIVEN for true and CONSENT_DECLINED for false.
-     *
-     * @param context a context that will be passed to the SharedPreferences to set the user consent.
-     * @param applies True if GDPR applies, false otherwise.
-     * @param consented whether or not the user has consented.
-     */
-    fun setGdpr(
-        context: Context,
-        applies: Boolean?,
-        consented: Boolean,
-    ) {
-        setGdpr(
-            context,
-            applies,
-            if (consented) GdprConsentStatus.GDPR_CONSENT_GRANTED else GdprConsentStatus.GDPR_CONSENT_DENIED,
-        )
-    }
-
-    /**
-     * Notify Pangle of the CCPA compliance.
-     *
-     * @param context The current [Context].
-     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
-     * @param privacyString The CCPA privacy String.
-     */
-    override fun setCcpaConsent(
-        context: Context,
-        hasGrantedCcpaConsent: Boolean,
-        privacyString: String,
-    ) {
-        PAGConfig.setDoNotSell(
-            when (hasGrantedCcpaConsent) {
-                true -> {
-                    PartnerLogController.log(CCPA_CONSENT_GRANTED)
-                    PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_SELL
-                }
-
-                false -> {
-                    PartnerLogController.log(CCPA_CONSENT_DENIED)
-                    PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_NOT_SELL
-                }
-            },
-        )
-    }
-
-    /**
-     * Notify Pangle the user's CCPA consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
-     */
-    fun setCcpaConsent(
-        context: Context,
-        hasGrantedCcpaConsent: Boolean,
-    ) {
-        setCcpaConsent(context, hasGrantedCcpaConsent, "")
-    }
-
-    /**
      * Notify Pangle of the COPPA subjectivity.
      *
      * @param context The current [Context].
-     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
+     * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(
+    override fun setIsUserUnderage(
         context: Context,
-        isSubjectToCoppa: Boolean,
+        isUserUnderage: Boolean,
     ) {
         PAGConfig.setChildDirected(
-            when (isSubjectToCoppa) {
+            when (isUserUnderage) {
                 true -> {
-                    PartnerLogController.log(COPPA_SUBJECT)
+                    PartnerLogController.log(USER_IS_UNDERAGE)
                     PAGConstant.PAGChildDirectedType.PAG_CHILD_DIRECTED_TYPE_CHILD
                 }
 
                 false -> {
-                    PartnerLogController.log(COPPA_NOT_SUBJECT)
+                    PartnerLogController.log(USER_IS_NOT_UNDERAGE)
                     PAGConstant.PAGChildDirectedType.PAG_CHILD_DIRECTED_TYPE_NON_CHILD
                 }
             },
@@ -255,17 +180,17 @@ class PangleAdapter : PartnerAdapter {
      * Get a bid token if network bidding is supported.
      *
      * @param context The current [Context].
-     * @param request The [PreBidRequest] instance containing relevant data for the current bid request.
+     * @param request The [PartnerAdPreBidRequest] instance containing relevant data for the current bid request.
      *
      * @return A Map of biddable token Strings.
      */
     override suspend fun fetchBidderInformation(
         context: Context,
-        request: PreBidRequest,
-    ): Map<String, String> {
+        request: PartnerAdPreBidRequest,
+    ): Result<Map<String, String>> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
         PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
-        return emptyMap()
+        return Result.success(emptyMap())
     }
 
     /**
@@ -284,10 +209,10 @@ class PangleAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> loadBannerAd(request, partnerAdListener)
-            AdFormat.INTERSTITIAL.key -> loadInterstitialAd(request, partnerAdListener)
-            AdFormat.REWARDED.key -> loadRewardedAd(request, partnerAdListener)
+        return when (request.format) {
+            PartnerAdFormats.BANNER -> loadBannerAd(request, partnerAdListener)
+            PartnerAdFormats.INTERSTITIAL -> loadInterstitialAd(request, partnerAdListener)
+            PartnerAdFormats.REWARDED -> loadRewardedAd(request, partnerAdListener)
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
                 Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
@@ -310,14 +235,14 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
         val listener = listeners.remove(partnerAd.request.identifier)
 
-        return when (partnerAd.request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> {
+        return when (partnerAd.request.format) {
+            PartnerAdFormats.BANNER -> {
                 // Banner ads do not have a separate "show" mechanism.
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
 
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
+            PartnerAdFormats.INTERSTITIAL, PartnerAdFormats.REWARDED -> {
                 showFullscreenAd(activity, partnerAd, listener)
             }
             else -> {
@@ -338,18 +263,57 @@ class PangleAdapter : PartnerAdapter {
         PartnerLogController.log(INVALIDATE_STARTED)
         listeners.remove(partnerAd.request.identifier)
 
-        return when (partnerAd.request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> destroyBannerAd(partnerAd)
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
+        return when (partnerAd.request.format) {
+            PartnerAdFormats.BANNER -> destroyBannerAd(partnerAd)
+            else -> {
                 // Pangle does not have destroy methods for their fullscreen ads.
                 PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             }
+        }
+    }
 
-            else -> {
-                PartnerLogController.log(INVALIDATE_SUCCEEDED)
-                Result.success(partnerAd)
-            }
+    override fun setConsents(
+        context: Context,
+        consents: Map<ConsentKey, ConsentValue>,
+        modifiedKeys: Set<ConsentKey>
+    ) {
+        consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.let {
+            PAGConfig.setGDPRConsent(
+                when (it) {
+                    ConsentValues.GRANTED -> {
+                        PartnerLogController.log(GDPR_CONSENT_GRANTED)
+                        PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_CONSENT
+                    }
+
+                    ConsentValues.DENIED -> {
+                        PartnerLogController.log(GDPR_CONSENT_DENIED)
+                        PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_NO_CONSENT
+                    }
+
+                    else -> {
+                        PartnerLogController.log(GDPR_CONSENT_UNKNOWN)
+                        PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_DEFAULT
+                    }
+                },
+            )
+        }
+
+        consents[ConsentKeys.USP]?.let {
+            val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
+            PAGConfig.setDoNotSell(
+                when (hasGrantedUspConsent) {
+                    true -> {
+                        PartnerLogController.log(USP_CONSENT_GRANTED)
+                        PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_SELL
+                    }
+
+                    false -> {
+                        PartnerLogController.log(USP_CONSENT_DENIED)
+                        PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_NOT_SELL
+                    }
+                },
+            )
         }
     }
 
@@ -374,7 +338,7 @@ class PangleAdapter : PartnerAdapter {
 
             PAGBannerAd.loadAd(
                 request.partnerPlacement,
-                PAGBannerRequest(getPangleBannerSize(request.size)),
+                PAGBannerRequest(getPangleBannerSize(request.bannerSize?.size)),
                 object : PAGBannerAdLoadListener {
                     override fun onError(
                         code: Int,
