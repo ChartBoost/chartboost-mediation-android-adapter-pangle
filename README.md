@@ -5,15 +5,15 @@ The Chartboost Mediation Pangle adapter mediates Pangle via the Chartboost Media
 ## Minimum Requirements
 
 | Plugin                   | Version |
-| ------------------------ | ------- |
-| Chartboost Mediation SDK | 4.0.0+  |
+| ------------------------ |---------|
+| Chartboost Mediation SDK | 5.0.0+  |
 | Android API              | 21+     |
 
 ## Integration
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-pangle:4.5.9.0.2.1"
+    implementation "com.chartboost:chartboost-mediation-adapter-pangle:5.5.9.0.2.0"
 ```
 
 ## Contributions
