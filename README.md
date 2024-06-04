@@ -13,7 +13,7 @@ The Chartboost Mediation Pangle adapter mediates Pangle via the Chartboost Media
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-pangle:5.5.9.0.2.0"
+    implementation "com.chartboost:chartboost-mediation-adapter-pangle:5.6.0.0.4.0"
 ```
 
 ## Contributions
