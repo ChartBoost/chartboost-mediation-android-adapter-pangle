@@ -279,6 +279,9 @@ class PangleAdapter : PartnerAdapter {
         modifiedKeys: Set<ConsentKey>,
     ) {
         consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.let {
+            if (PangleAdapterConfiguration.isGdprConsentOverridden) {
+                return@let
+            }
             PAGConfig.setGDPRConsent(
                 when (it) {
                     ConsentValues.GRANTED -> {
@@ -300,6 +303,9 @@ class PangleAdapter : PartnerAdapter {
         }
 
         consents[ConsentKeys.USP]?.let {
+            if (PangleAdapterConfiguration.isDoNotSellOverridden) {
+                return@let
+            }
             val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
             PAGConfig.setDoNotSell(
                 when (hasGrantedUspConsent) {

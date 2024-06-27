@@ -1,8 +1,12 @@
 package com.chartboost.mediation.pangleadapter
 
+import com.bytedance.sdk.openadsdk.api.PAGConstant.PAGDoNotSellType
+import com.bytedance.sdk.openadsdk.api.PAGConstant.PAGGDPRConsentType
+import com.bytedance.sdk.openadsdk.api.init.PAGConfig
 import com.bytedance.sdk.openadsdk.api.init.PAGSdk
 import com.chartboost.chartboostmediationsdk.domain.PartnerAdapterConfiguration
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.CUSTOM
 
 object PangleAdapterConfiguration : PartnerAdapterConfiguration {
     /**
@@ -42,8 +46,45 @@ object PangleAdapterConfiguration : PartnerAdapterConfiguration {
         set(value) {
             field = value
             PartnerLogController.log(
-                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                CUSTOM,
                 "Pangle's multi-process support is ${if (value) "enabled" else "disabled"}.",
             )
         }
+
+    /**
+     * Use to manually set the GDPR consent status on the Pangle SDK.
+     * This is generally unnecessary as the Mediation SDK will set the consent status automatically
+     * based on the latest consent info.
+     *
+     * @param consent An Int representing the [PAGGDPRConsentType].
+     */
+    fun setGdprConsentOverride(@PAGGDPRConsentType consent: Int) {
+        isGdprConsentOverridden = true
+        PAGConfig.setGDPRConsent(consent)
+        PartnerLogController.log(CUSTOM, "Pangle GDPR consent status overridden to $consent")
+    }
+
+
+    /**
+     * Use to manually set the do not sell flag on the Pangle SDK.
+     * This is generally unnecessary as the Mediation SDK will set the consent flags automatically
+     * based on the latest consent info.
+     *
+     * @param doNotSell An Int representing the [PAGDoNotSellType].
+     */
+    fun setDoNotSellOverride(@PAGDoNotSellType doNotSell: Int) {
+        isDoNotSellOverridden = true
+        PAGConfig.setDoNotSell(doNotSell)
+        PartnerLogController.log(CUSTOM, "Pangle do not sell overridden to $doNotSell")
+    }
+
+    /**
+     * Whether GDPR consent has been overridden by the publisher.
+     */
+    internal var isGdprConsentOverridden = false
+
+    /**
+     * Whether privacy consent has been overridden by the publisher.
+     */
+    internal var isDoNotSellOverridden = false
 }
