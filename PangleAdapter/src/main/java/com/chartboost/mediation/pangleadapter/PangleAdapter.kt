@@ -280,7 +280,9 @@ class PangleAdapter : PartnerAdapter {
         consents: Map<ConsentKey, ConsentValue>,
         modifiedKeys: Set<ConsentKey>,
     ) {
-        consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.let {
+        val consent = consents[configuration.partnerId]?.takeIf { it.isNotBlank() }
+            ?: consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.takeIf { it.isNotBlank() }
+        consent?.let {
             if (PangleAdapterConfiguration.isGdprConsentOverridden) {
                 return@let
             }
@@ -304,11 +306,15 @@ class PangleAdapter : PartnerAdapter {
             )
         }
 
-        consents[ConsentKeys.USP]?.let {
+        val hasGrantedUspConsent =
+            consents[ConsentKeys.CCPA_OPT_IN]?.takeIf { it.isNotBlank() }
+                ?.equals(ConsentValues.GRANTED)
+                ?: consents[ConsentKeys.USP]?.takeIf { it.isNotBlank() }
+                    ?.let { ConsentManagementPlatform.getUspConsentFromUspString(it) }
+        hasGrantedUspConsent?.let {
             if (PangleAdapterConfiguration.isDoNotSellOverridden) {
                 return@let
             }
-            val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
             PAGConfig.setDoNotSell(
                 when (hasGrantedUspConsent) {
                     true -> {
