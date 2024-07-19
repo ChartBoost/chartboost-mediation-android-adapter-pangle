@@ -11,14 +11,23 @@ import android.app.Activity
 import android.content.Context
 import android.util.Size
 import com.bytedance.sdk.openadsdk.api.PAGConstant
-import com.bytedance.sdk.openadsdk.api.banner.*
+import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAd
+import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAdInteractionListener
+import com.bytedance.sdk.openadsdk.api.banner.PAGBannerAdLoadListener
+import com.bytedance.sdk.openadsdk.api.banner.PAGBannerRequest
+import com.bytedance.sdk.openadsdk.api.banner.PAGBannerSize
 import com.bytedance.sdk.openadsdk.api.init.PAGConfig
 import com.bytedance.sdk.openadsdk.api.init.PAGSdk
 import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAd
 import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdInteractionListener
 import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialAdLoadListener
 import com.bytedance.sdk.openadsdk.api.interstitial.PAGInterstitialRequest
-import com.bytedance.sdk.openadsdk.api.reward.*
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardItem
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAd
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdInteractionListener
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdLoadListener
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedRequest
+import com.chartboost.chartboostmediationsdk.ad.ChartboostMediationBannerAdView.ChartboostMediationBannerSize.Companion.asSize
 import com.chartboost.chartboostmediationsdk.domain.*
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
@@ -46,7 +55,11 @@ import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerA
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_DENIED
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_GRANTED
-import com.chartboost.core.consent.*
+import com.chartboost.core.consent.ConsentKey
+import com.chartboost.core.consent.ConsentKeys
+import com.chartboost.core.consent.ConsentManagementPlatform
+import com.chartboost.core.consent.ConsentValue
+import com.chartboost.core.consent.ConsentValues
 import com.chartboost.mediation.pangleadapter.PangleAdapterConfiguration.adapterVersion
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -352,7 +365,7 @@ class PangleAdapter : PartnerAdapter {
 
             PAGBannerAd.loadAd(
                 request.partnerPlacement,
-                PAGBannerRequest(getPangleBannerSize(request.bannerSize?.size)),
+                PAGBannerRequest(getPangleBannerSize(request.bannerSize?.asSize())),
                 object : PAGBannerAdLoadListener {
                     override fun onError(
                         code: Int,
