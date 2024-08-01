@@ -3,6 +3,9 @@
 Note the first digit of every adapter version corresponds to the major version of the Chartboost Mediation SDK compatible with that adapter. 
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
+### 5.6.1.0.6.0
+- This version of the adapter supports Chartboost Mediation SDK version 5.+.
+
 ### 4.6.1.0.6.0
 - This version of the adapter has been certified with Pangle SDK 6.1.0.6.
 
@@ -32,6 +35,9 @@ Adapters are compatible with any Chartboost Mediation SDK version within that ma
 
 ### 4.5.9.0.4.0
 - This version of the adapter has been certified with Pangle SDK 5.9.0.4.
+
+### 4.5.9.0.2.1
+- Add function allow publishers to set a boolean consent value for the Pangle SDK consent info.
 
 ### 4.5.9.0.2.0
 - This version of the adapter has been certified with Pangle SDK 5.9.0.2.
