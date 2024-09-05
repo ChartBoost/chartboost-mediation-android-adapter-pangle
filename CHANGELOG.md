@@ -3,13 +3,24 @@
 Note the first digit of every adapter version corresponds to the major version of the Chartboost Mediation SDK compatible with that adapter. 
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
+All official releases can be found on this repository's [releases page](https://github.com/ChartBoost/chartboost-mediation-android-adapter-pangle/releases).
+
+### 4.6.2.0.4.0
+- This version of the adapter has been certified with Pangle SDK 6.2.0.4.
+
 ### 5.6.1.0.9.0
+- This version of the adapter has been certified with Pangle SDK 6.1.0.9.
+
+### 4.6.1.0.9.0
 - This version of the adapter has been certified with Pangle SDK 6.1.0.9.
 
 ### 5.6.1.0.8.0
 - This version of the adapter has been certified with Pangle SDK 6.1.0.8.
 
 ### 5.6.1.0.7.0
+- This version of the adapter has been certified with Pangle SDK 6.1.0.7.
+
+### 4.6.1.0.7.0
 - This version of the adapter has been certified with Pangle SDK 6.1.0.7.
 
 ### 5.6.1.0.6.0
