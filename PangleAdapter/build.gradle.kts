@@ -43,7 +43,7 @@ android {
         minSdk = 21
         targetSdk = 34
         // If you touch the following line, don't forget to update scripts/get_rc_version.zsh
-        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "5.6.2.0.6.0"
+        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "5.6.2.0.7.0"
         buildConfigField("String", "CHARTBOOST_MEDIATION_PANGLE_ADAPTER_VERSION", "\"${android.defaultConfig.versionName}\"")
 
         consumerProguardFiles("proguard-rules.pro")
@@ -92,7 +92,7 @@ dependencies {
     "candidateImplementation"("com.chartboost:chartboost-mediation-sdk:5.0.0")
 
     // Partner SDK
-    implementation("com.pangle.global:ads-sdk:6.2.0.6")
+    implementation("com.pangle.global:ads-sdk:6.2.0.7")
 
     // Partner SDK Dependencies
     implementation("androidx.appcompat:appcompat:1.5.1")
