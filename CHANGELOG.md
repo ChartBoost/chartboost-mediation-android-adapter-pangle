@@ -34,6 +34,9 @@ All official releases can be found on this repository's [releases page](https://
 
 ## Mediation 4
 
+### 4.6.3.0.2.0
+- This version of the adapter has been certified with Pangle SDK 6.3.0.2.
+
 ### 4.6.2.0.7.0
 - This version of the adapter has been certified with Pangle SDK 6.2.0.7.
 
