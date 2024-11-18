@@ -14,6 +14,12 @@ All official releases can be found on this repository's [releases page](https://
 ### 5.6.3.0.4.0
 - This version of the adapter has been certified with Pangle SDK 6.3.0.4.
 
+### 5.6.3.0.3.0
+- This version of the adapter has been certified with Pangle SDK 6.3.0.3.
+
+### 5.6.3.0.2.0
+- This version of the adapter has been certified with Pangle SDK 6.3.0.2.
+
 ### 5.6.2.0.7.0
 - This version of the adapter has been certified with Pangle SDK 6.2.0.7.
 
