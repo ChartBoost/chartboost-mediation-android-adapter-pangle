@@ -176,7 +176,9 @@ class PangleAdapter : PartnerAdapter {
             .build()
 
     /**
-     * Notify Pangle of the COPPA subjectivity.
+     * Notify Pangle of the COPPA subjectivity. Pangle removed direct COPPA settings
+     * starting in Pangle 7.1, and are now managed more broadly using PAConsent. Therefore
+     * this method no longer has any affect.
      *
      * @param context The current [Context].
      * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
@@ -185,19 +187,6 @@ class PangleAdapter : PartnerAdapter {
         context: Context,
         isUserUnderage: Boolean,
     ) {
-        PAGConfig.setChildDirected(
-            when (isUserUnderage) {
-                true -> {
-                    PartnerLogController.log(USER_IS_UNDERAGE)
-                    PAGConstant.PAGChildDirectedType.PAG_CHILD_DIRECTED_TYPE_CHILD
-                }
-
-                false -> {
-                    PartnerLogController.log(USER_IS_NOT_UNDERAGE)
-                    PAGConstant.PAGChildDirectedType.PAG_CHILD_DIRECTED_TYPE_NON_CHILD
-                }
-            },
-        )
     }
 
     /**
@@ -334,21 +323,21 @@ class PangleAdapter : PartnerAdapter {
                 ?: consents[ConsentKeys.USP]?.takeIf { it.isNotBlank() }
                     ?.let { ConsentManagementPlatform.getUspConsentFromUspString(it) }
         hasGrantedUspConsent?.let {
-            if (PangleAdapterConfiguration.isDoNotSellOverridden) {
+            if (PangleAdapterConfiguration.isPAConsentOverridden) {
                 return@let
             }
-            PAGConfig.setDoNotSell(
+            PAGConfig.setPAConsent(
                 when (hasGrantedUspConsent) {
                     true -> {
                         PartnerLogController.log(USP_CONSENT_GRANTED)
-                        PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_SELL
+                        PAGConstant.PAGPAConsentType.PAG_PA_CONSENT_TYPE_CONSENT
                     }
 
                     false -> {
                         PartnerLogController.log(USP_CONSENT_DENIED)
-                        PAGConstant.PAGDoNotSellType.PAG_DO_NOT_SELL_TYPE_NOT_SELL
+                        PAGConstant.PAGPAConsentType.PAG_PA_CONSENT_TYPE_NO_CONSENT
                     }
-                },
+                }
             )
         }
     }
