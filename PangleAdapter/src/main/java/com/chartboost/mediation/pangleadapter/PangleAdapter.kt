@@ -178,11 +178,12 @@ class PangleAdapter : PartnerAdapter {
     /**
      * Notify Pangle of the COPPA subjectivity. Pangle removed direct COPPA settings
      * starting in Pangle 7.1, and are now managed more broadly using PAConsent. Therefore
-     * this method no longer has any affect.
+     * this method no longer has any effect.
      *
      * @param context The current [Context].
      * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
      */
+    @Deprecated("This method is obsolete and has no replacement. Using it has no effect.")
     override fun setIsUserUnderage(
         context: Context,
         isUserUnderage: Boolean,
