@@ -7,7 +7,7 @@
 
 package com.chartboost.mediation.pangleadapter
 
-import com.bytedance.sdk.openadsdk.api.PAGConstant.PAGDoNotSellType
+import com.bytedance.sdk.openadsdk.api.PAGConstant
 import com.bytedance.sdk.openadsdk.api.PAGConstant.PAGGDPRConsentType
 import com.bytedance.sdk.openadsdk.api.init.PAGConfig
 import com.bytedance.sdk.openadsdk.api.init.PAGSdk
@@ -77,12 +77,12 @@ object PangleAdapterConfiguration : PartnerAdapterConfiguration {
      * This is generally unnecessary as the Mediation SDK will set the consent flags automatically
      * based on the latest consent info.
      *
-     * @param doNotSell An Int representing the [PAGDoNotSellType].
+     * @param constentType An Int representing the [PAGPAConsentType].
      */
-    fun setDoNotSellOverride(@PAGDoNotSellType doNotSell: Int) {
-        isDoNotSellOverridden = true
-        PAGConfig.setDoNotSell(doNotSell)
-        PartnerLogController.log(CUSTOM, "Pangle do not sell overridden to $doNotSell")
+    fun setPAConsentOverride(@PAGConstant.PAGPAConsentType constentType: Int) {
+        isPAConsentOverridden = true
+        PAGConfig.setPAConsent(constentType)
+        PartnerLogController.log(CUSTOM, "Pangle PA consent overridden to $constentType")
     }
 
     /**
@@ -93,5 +93,5 @@ object PangleAdapterConfiguration : PartnerAdapterConfiguration {
     /**
      * Whether privacy consent has been overridden by the publisher.
      */
-    internal var isDoNotSellOverridden = false
+    internal var isPAConsentOverridden = false
 }
